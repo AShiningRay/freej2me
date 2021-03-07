@@ -19,29 +19,193 @@ package javax.microedition.m3g;
 public class VertexBuffer extends Object3D
 {
 
-	public VertexBuffer() {  }
+	// The `fixed` field represents whether or not the vertex count (`length`)
+	// of this `VertexBuffer` has been determined.
+	//
+	// The first `VertexArray` added to this `VertexBuffer` makes
+	// it "fixed", and the `length` will be set to the number
+	// of vertices in the `VertexArray`.
+	//
+	// Once the `VertexBuffer` is fixed, it only accepts `VertexArray`s
+	// with exactly `length` vertices.
+	private boolean fixed;
+	private int length;
+	private int defaultColor;
+	private VertexArray positions;
+	private VertexArray normals;
+	private VertexArray colors;
+	private VertexArray[] texCoords;
+
+	private float positionScale;
+	private float[] positionBias;
+	private float[] texCoordScale;
+	private float[][] texCoordBias;
+	// colorScale =   1/255
+	// colorBias  = 128/255
 
 
-	public VertexArray getColors() { return new VertexArray(0,0,0); }
+	public VertexBuffer()
+	{
+		this.fixed = false;
+		this.length = 0;
+		this.defaultColor = 0xffffffff;
+		this.positions = null;
+		this.normals = null;
+		this.colors = null;
+		this.texCoords = new VertexArray[Graphics3D.NUM_TEXTURE_UNITS];
+		this.texCoordScale = new float[Graphics3D.NUM_TEXTURE_UNITS];
+		this.texCoordBias = new float[Graphics3D.NUM_TEXTURE_UNITS][0];
+	}
 
-	public int getDefaultColor() { return 0; }
 
-	public VertexArray getNormals() { return new VertexArray(0,0,0); }
+	public VertexArray getColors()
+	{
+		return this.colors;
+	}
 
-	public VertexArray getPositions(float[] scaleBias) { return new VertexArray(0,0,0); }
+	public int getDefaultColor()
+	{
+		return this.defaultColor;
+	}
 
-	public VertexArray getTexCoords(int index, float[] scaleBias) { return new VertexArray(0,0,0); }
+	public VertexArray getNormals()
+	{
+		return this.normals;
+	}
 
-	public int getVertexCount() { return 0; }
+	public VertexArray getPositions(float[] scaleBias)
+	{
+		if (scaleBias == null)
+			return this.positions;
 
-	public void setColors(VertexArray colors) {  }
+		if (scaleBias.length < 4)
+			throw new java.lang.IllegalArgumentException();
 
-	public void setDefaultColor(int ARGB) {  }
+		scaleBias[0] = this.positionScale;
+		for (int i = 0; i < 3; i++)
+			scaleBias[i + 1] = this.positionBias[i];
 
-	public void setNormals(VertexArray normals) {  }
+		return this.positions;
+	}
 
-	public void setPositions(VertexArray positions, float scale, float[] bias) {  }
+	public VertexArray getTexCoords(int index, float[] scaleBias)
+	{
+		if (index < 0 || Graphics3D.NUM_TEXTURE_UNITS - 1 < index)
+			throw new java.lang.IndexOutOfBoundsException();
 
-	public void setTexCoords(int index, VertexArray texCoords, float scale, float[] bias) {  }
+		if (scaleBias == null)
+			return this.texCoords[index];
+
+		if (scaleBias.length < this.texCoords[index].getVertexCount() + 1)
+			throw new java.lang.IllegalArgumentException();
+
+		scaleBias[0] = this.texCoordScale[index];
+		for (int i = 0; i < this.texCoords[index].getVertexCount(); i++)
+			scaleBias[i + 1] = this.texCoordBias[index][i];
+
+		return this.texCoords[index];
+	}
+
+	public int getVertexCount()
+	{
+		return this.length;
+	}
+
+	public void setColors(VertexArray colors)
+	{
+		if (colors == null)
+		{
+			this.colors = null;
+			return;
+		}
+
+		if (colors.getComponentType() != 1 ||
+			colors.getComponentCount() < 3 || 4 < colors.getComponentCount() ||
+			(this.fixed && colors.getVertexCount() != this.length))
+			throw new java.lang.IllegalArgumentException();
+
+		this.updateLength(colors.getVertexCount());
+		this.colors = colors;
+	}
+
+	public void setDefaultColor(int ARGB)
+	{
+		this.defaultColor = ARGB;
+	}
+
+	public void setNormals(VertexArray normals)
+	{
+		if (normals == null)
+		{
+			this.normals = null;
+			return;
+		}
+
+		if (normals.getComponentCount() != 3 ||
+			(this.fixed && normals.getVertexCount() != this.length))
+			throw new java.lang.IllegalArgumentException();
+
+		this.updateLength(normals.getVertexCount());
+		this.normals = normals;
+	}
+
+	public void setPositions(VertexArray positions, float scale, float[] bias)
+	{
+		if (positions == null)
+		{
+			this.positions = null;
+			return;
+		}
+
+		if (positions.getComponentCount() != 3 ||
+			(this.fixed && positions.getVertexCount() != this.length) ||
+			(bias != null && bias.length < 3))
+			throw new java.lang.IllegalArgumentException();
+
+		if (bias == null)
+			bias = new float[3];
+
+		this.updateLength(positions.getVertexCount());
+		this.positions = positions;
+		this.positionScale = scale;
+		this.positionBias = bias;
+	}
+
+	public void setTexCoords(
+		int index,
+		VertexArray texCoords,
+		float scale,
+		float[] bias
+	) {
+		if (index < 0 || Graphics3D.NUM_TEXTURE_UNITS - 1 < index)
+			throw new java.lang.IndexOutOfBoundsException();
+
+		if (texCoords == null) {
+			this.texCoords[index] = null;
+			return;
+		}
+
+		int componentCount = texCoords.getComponentCount();
+
+		if (componentCount < 2 || 3 < componentCount ||
+			(this.fixed && texCoords.getVertexCount() != this.length) ||
+			(bias != null && bias.length < componentCount))
+			throw new java.lang.IllegalArgumentException();
+
+		if (bias == null)
+			bias = new float[componentCount];
+
+		this.updateLength(texCoords.getVertexCount());
+		this.texCoords[index] = texCoords;
+		this.texCoordScale[index] = scale;
+		this.texCoordBias[index] = bias;
+	}
+
+	private void updateLength(int length)
+	{
+		if (this.fixed) return;
+		this.fixed = true;
+		this.length = length;
+	}
 
 }

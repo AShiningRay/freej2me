@@ -19,8 +19,22 @@ package javax.microedition.m3g;
 public abstract class IndexBuffer extends Object3D
 {
 
-	public int getIndexCount() { return 0; }
+	protected int indexCount;
+	protected int[] indices;
 
-	public void getIndices(int[] indices) {  }
+	public int getIndexCount()
+	{
+		return this.indexCount;
+	}
+
+	public void getIndices(int[] indices)
+	{
+		if (indices == null) throw new java.lang.NullPointerException();
+		if (indices.length < this.indexCount)
+			throw new java.lang.IllegalArgumentException();
+
+		for (int i = 0; i < this.indexCount; i++)
+			indices[i] = this.indices[i];
+	}
 
 }
