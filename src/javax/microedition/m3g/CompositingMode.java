@@ -37,41 +37,103 @@ public class CompositingMode extends Object3D
 	private boolean colorWrite;
 
 
-	public CompositingMode() {  }
+	public CompositingMode()
+	{
+			this.blending = REPLACE;
+			this.alphaThreshold = 0f;
+			this.depthOffsetUnits = 0f;
+			this.depthOffsetFactor = 0f;
+			this.depthTest = true;
+			this.depthWrite = true;
+			this.colorWrite = true;
+			this.alphaWrite = true;
+	}
 
 
-	public float getAlphaThreshold() { return alphaThreshold; }
+	public float getAlphaThreshold()
+	{
+		return this.alphaThreshold;
+	}
 
-	public int getBlending() { return blending; }
+	public int getBlending()
+	{
+		return this.blending;
+	}
 
-	public float getDepthOffsetFactor() { return depthOffsetFactor; }
+	public float getDepthOffsetFactor()
+	{
+		return this.depthOffsetFactor;
+	}
 
-	public float getDepthOffsetUnits() { return depthOffsetUnits; }
+	public float getDepthOffsetUnits()
+	{
+		return this.depthOffsetUnits;
+	}
 
-	public boolean isAlphaWriteEnabled() { return alphaWrite; }
+	public boolean isAlphaWriteEnabled()
+	{
+		return this.alphaWrite;
+	}
 
-	public boolean isColorWriteEnabled() { return colorWrite; }
+	public boolean isColorWriteEnabled()
+	{
+		return this.colorWrite;
+	}
 
-	public boolean isDepthTestEnabled() { return depthTest; }
+	public boolean isDepthTestEnabled()
+	{
+		return this.depthTest;
+	}
 
-	public boolean isDepthWriteEnabled() { return depthWrite; }
+	public boolean isDepthWriteEnabled()
+	{
+		return this.depthWrite;
+	}
 
-	public void setAlphaThreshold(float threshold) { alphaThreshold = threshold; }
+	public void setAlphaThreshold(float threshold)
+	{
+		if (threshold < 0 || 1 < threshold)
+			throw new java.lang.IllegalArgumentException();
 
-	public void setAlphaWriteEnable(boolean enable) { alphaWrite = enable; }
+		this.alphaThreshold = threshold;
+	}
 
-	public void setBlending(int mode) { blending = mode; }
+	public void setAlphaWriteEnable(boolean enable)
+	{
+		this.alphaWrite = enable;
+	}
 
-	public void setColorWriteEnable(boolean enable) { colorWrite = enable; }
+	public void setBlending(int mode)
+	{
+		if (mode != ALPHA &&
+			mode != ALPHA_ADD &&
+			mode != MODULATE &&
+			mode != MODULATE_X2 &&
+			mode != REPLACE)
+			throw new java.lang.IllegalArgumentException();
+
+		this.blending = mode;
+	}
+
+	public void setColorWriteEnable(boolean enable)
+	{
+		this.colorWrite = enable;
+	}
 
 	public void setDepthOffset(float factor, float units)
 	{
-		depthOffsetFactor = factor;
-		depthOffsetUnits = units;
+		this.depthOffsetFactor = factor;
+		this.depthOffsetUnits = units;
 	}
 
-	public void setDepthTestEnable(boolean enable) { depthTest = enable; }
+	public void setDepthTestEnable(boolean enable)
+	{
+		this.depthTest = enable;
+	}
 
-	public void setDepthWriteEnable(boolean enable) { depthWrite = enable; }
+	public void setDepthWriteEnable(boolean enable)
+	{
+		this.depthWrite = enable;
+	}
 
 }

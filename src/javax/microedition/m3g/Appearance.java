@@ -24,34 +24,87 @@ public class Appearance extends Object3D
 	private Material material;
 	private PolygonMode polygonMode;
 	private int layer;
-	private Texture2D texture;
+	private Texture2D[] texture;
 
 
-	public Appearance() {  }
+	public Appearance()
+	{
+		this.layer = 0;
+		this.polygonMode = null;
+		this.compositingMode = null;
+		this.texture = new Texture2D[Graphics3D.NUM_TEXTURE_UNITS];
+		this.material = null;
+		this.fog = null;
+	}
 
 
-	public CompositingMode getCompositingMode() { return compositingMode; }
+	public CompositingMode getCompositingMode()
+	{
+		return this.compositingMode;
+	}
 
-	public Fog getFog() { return fog; }
+	public Fog getFog()
+	{
+		return this.fog;
+	}
 
-	public int getLayer() { return layer; }
+	public int getLayer()
+	{
+		return this.layer;
+	}
 
-	public Material getMaterial() { return material; }
+	public Material getMaterial()
+	{
+		return this.material;
+	}
 
-	public PolygonMode getPolygonMode() { return polygonMode; }
+	public PolygonMode getPolygonMode()
+	{
+		return this.polygonMode;
+	}
 
-	public Texture2D getTexture(int index) { return texture; }
+	public Texture2D getTexture(int index)
+	{
+		if (index < 0 || Graphics3D.NUM_TEXTURE_UNITS - 1 < index)
+			throw new java.lang.IndexOutOfBoundsException();
 
-	public void setCompositingMode(CompositingMode compMode) { compositingMode = compMode; }
+		return this.texture[index];
+	}
 
-	public void setFog(Fog f) { fog = f; }
+	public void setCompositingMode(CompositingMode compositingMode)
+	{
+		this.compositingMode = compositingMode;
+	}
 
-	public void setLayer(int i) { layer = i; }
+	public void setFog(Fog fog)
+	{
+		this.fog = fog;
+	}
 
-	public void setMaterial(Material mat) { material = mat; }
+	public void setLayer(int layer)
+	{
+		if (layer < -63 || 63 < layer)
+			throw new java.lang.IndexOutOfBoundsException();
 
-	public void setPolygonMode(PolygonMode mode) { polygonMode = mode; }
+		this.layer = layer;
+	}
 
-	public void setTexture(int index, Texture2D tex) { texture = tex; }
+	public void setMaterial(Material material)
+	{
+		this.material = material;
+	}
+
+	public void setPolygonMode(PolygonMode polygonMode)
+	{
+		this.polygonMode = polygonMode;
+	}
+
+	public void setTexture(int index, Texture2D texture)
+	{
+		if (index < 0 || Graphics3D.NUM_TEXTURE_UNITS - 1 < index)
+			throw new java.lang.IndexOutOfBoundsException();
+
+		this.texture[index] = texture;
+	}
 
 }

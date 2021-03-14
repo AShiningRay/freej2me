@@ -28,36 +28,96 @@ public class PolygonMode extends Object3D
 	public static final int WINDING_CW = 169;
 
 
-	private int culling = CULL_BACK;
-	private int shading = SHADE_FLAT;
-	private int winding = WINDING_CCW;
+	private int culling;
+	private int shading;
+	private int winding;
+	private boolean twoSidedLighting;
+	private boolean localCameraLighting;
+	private boolean perspectiveCorrection;
 
 
-	public PolygonMode() {  }
+	public PolygonMode()
+	{
+		this.culling = CULL_BACK;
+		this.winding = WINDING_CCW;
+		this.shading = SHADE_SMOOTH;
+		this.twoSidedLighting = false;
+		this.localCameraLighting = false;
+		this.perspectiveCorrection = false;
+	}
 
 
-	public int getCulling() { return culling; }
+	public int getCulling()
+	{
+		return this.culling;
+	}
 
-	public int getShading() { return shading; }
+	public int getShading()
+	{
+		return this.shading;
+	}
 
-	public int getWinding() { return winding; }
+	public int getWinding()
+	{
+		return this.winding;
+	}
 
-	public boolean isLocalCameraLightingEnabled() { return false; }
+	public boolean isLocalCameraLightingEnabled()
+	{
+		return this.localCameraLighting;
+	}
 
-	public boolean isPerspectiveCorrectionEnabled() { return false; }
+	public boolean isPerspectiveCorrectionEnabled()
+	{
+		return this.perspectiveCorrection;
+	}
 
-	public boolean isTwoSidedLightingEnabled() { return false; }
+	public boolean isTwoSidedLightingEnabled()
+	{
+		return this.twoSidedLighting;
+	}
 
-	public void setCulling(int mode) { culling = mode; }
+	public void setCulling(int mode)
+	{
+		if (mode != CULL_BACK &&
+			mode != CULL_FRONT &&
+			mode != CULL_NONE)
+			throw new java.lang.IllegalArgumentException();
 
-	public void setLocalCameraLightingEnable(boolean enable) {  }
+		this.culling = mode;
+	}
 
-	public void setPerspectiveCorrectionEnable(boolean enable) {  }
+	public void setLocalCameraLightingEnable(boolean enable)
+	{
+		this.localCameraLighting = enable;
+	}
 
-	public void setShading(int mode) { shading = mode; }
+	public void setPerspectiveCorrectionEnable(boolean enable)
+	{
+		this.perspectiveCorrection = enable;
+	}
 
-	public void setTwoSidedLightingEnable(boolean enable) {  }
+	public void setShading(int mode)
+	{
+		if (mode != SHADE_FLAT &&
+			mode != SHADE_SMOOTH)
+			throw new java.lang.IllegalArgumentException();
 
-	public void setWinding(int mode) { winding = mode; }
+		this.shading = mode;
+	}
+
+	public void setTwoSidedLightingEnable(boolean enable)
+	{
+		this.twoSidedLighting = enable;
+	}
+
+	public void setWinding(int mode)
+	{
+		if (mode != WINDING_CCW &&
+			mode != WINDING_CW)
+			throw new java.lang.IllegalArgumentException();
+
+		this.winding = mode;
+	}
 
 }

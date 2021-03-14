@@ -22,6 +22,8 @@ import java.util.Arrays;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
 
 import org.recompile.mobile.Mobile;
 import org.recompile.mobile.PlatformGraphics;
@@ -359,63 +361,93 @@ public class Graphics3D
 
 		float[] scaleBias = new float[4];
 
-		VertexArray posRaw = vertices.getPositions(scaleBias);
-		int posRawCount = posRaw.getVertexCount();
+		VertexArray vertRaw = vertices.getPositions(scaleBias);
+		int vertCount = vertRaw.getVertexCount();
 
 		float scale = scaleBias[0];
 		float biasX = scaleBias[1];
 		float biasY = scaleBias[2];
 		float biasZ = scaleBias[3];
 
+		int[] triIndices = new int[triangles.getIndexCount()];
+		triangles.getIndices(triIndices);
+
+		VertexArray col = vertices.getColors();
+		Texture2D tex = appearance.getTexture(0);
+		Image2D teximg = tex == null ? null : tex.getImage();
+		VertexArray texVertRaw = vertices.getTexCoords(0, scaleBias);
+
+		float texScale = scaleBias[0];
+		float texBiasS = scaleBias[1];
+		float texBiasT = scaleBias[2];
+		float texBiasR = scaleBias[3];
+
+		Transform texcomptr = new Transform();
+		if (tex != null)
+			tex.getCompositeTransform(texcomptr);
+
 		Transform projection = new Transform();
 		this.currCam.getProjection(projection);
 
 		Transform tr = new Transform();
+		Transform textr = new Transform();
 
 		// Scale and translate mesh
 		tr.preScale(scale, scale, scale);
 		tr.preTranslate(biasX, biasY, biasZ);
+		// -> Local space
 
 		// Transform mesh from local coords to world coords
 		tr.preMultiplyTry(transform);
+		// -> World space
 
-		// "Set up" camera in the world
+		// Apply the inverse of the camera's transform to the mesh
 		tr.preMultiplyTry(this.currCamTransInv);
+		// -> View space
 
-		// Project to 2D
+		// Apply projection matrix
 		tr.preMultiply(projection);
+		// -> Clip space
+
+		// Scale and translate texture coordinates
+		textr.preScale(texScale, texScale, texScale);
+		textr.preTranslate(texBiasS, texBiasT, texBiasR);
+		textr.preMultiply(texcomptr);
+
+		// Do the transformation
+		float[] vertClip = new float[4 * vertCount];
+		tr.transform(vertRaw, vertClip, true);
+
+		float[] texVert = new float[4 * vertCount];
+		if (texVertRaw != null)
+			textr.transform(texVertRaw, texVert, true);
+
+		// Create Triangle objects for clipping
+		Triangle[] trisClip = Triangle.fromVertAndTris(vertClip, texVert, triIndices);
+
+		// Clip triangles
+		Triangle[] trisScreen = Arrays.stream(trisClip)
+				.flatMap(t -> t.clip())
+				.toArray(Triangle[]::new);
+		// At this point the triangles in `trisScreen` are actually
+		// in Normalized Device Coordinates, but they will be tranformed
+		// to Screen space in-place, hence the name.
+
+
+		// Reset transform
+		tr.setIdentity();
+		textr.setIdentity();
 
 		// Fit to viewport
 		tr.preScale(1, -1, 1);
 		tr.preTranslate(1, 1, 0);
 		tr.preScale((float) vieww / 2f, (float) viewh / 2f, 1f);
+		if (teximg != null)
+			textr.preScale(teximg.getWidth(), teximg.getHeight(), 1);
+		// -> Screen space
 
-		// Do the transformation
-		float[] pos = new float[4 * posRawCount];
-		tr.transform(posRaw, pos, true);
-
-		// Get list of triangles
-		int[] tris = new int[triangles.getIndexCount()];
-		triangles.getIndices(tris);
-
-		// `pos` contains 4 coordinates (XYZW) for each vertex:
-		//   x0 y0 z0 w0   x1 y1 z1 w1   ...
-		//
-		// `tris` contains 3 indices (ABC) for each triangle:
-		//   a0 b0 c0   a1 b1 c1   ...
-		//
-		// Each entry in `tris` is an index,
-		// which refers to an entry in `pos`,
-		// which contains the coordinates for one corner of one triangle.
-		//
-		// Coordinate R of corner L of triangle T:
-		//     = pos[4*tris[3*T + L] + R],
-		//   where R, L, T are 0-based indices
-		//
-		// For example, the 6th triangle's 2nd corner's Z (3rd) coordinate:
-		//     = pos[4 * tris[3 * (6-1) + (2-1)] + (3-1)]
-		//     = pos[4 * tris[3 *   5   +   1  ] +   2  ]
-		//     = pos[4 * tris[16] + 2]
+		// Perform viewport transform
+		Triangle.transform(trisScreen, tr, textr);
 
 		if (this.target instanceof Image2D)
 		{
@@ -424,46 +456,172 @@ public class Graphics3D
 		}
 		else if (this.target instanceof PlatformGraphics)
 		{
-			Graphics2D grp = ((PlatformGraphics) this.target).getGraphics2D();
+			PlatformGraphics pgrp = (PlatformGraphics) this.target;
+			BufferedImage img = pgrp.getCanvas();
+			Graphics2D grp = pgrp.getGraphics2D();
+			WritableRaster ras = img.getRaster();
 
 			Color colorOrig = grp.getColor();
-			Color colorFill = new Color(0, 32, 224, 16);
-			Color colorDraw = new Color(224, 0, 0, 255);
+			Color colorFill = new Color(0, 0, 224, 32);
+			Color colorDraw = new Color(0, 0, 0, 128);
 
-			for (int tri_id = 0; tri_id < tris.length; tri_id += 3)
+			for (int tri_id = 0; tri_id < trisScreen.length; tri_id++)
 			{
-				int cornerA_id, cornerB_id, cornerC_id;
-				cornerA_id = 4 * tris[tri_id + 0];
-				cornerB_id = 4 * tris[tri_id + 1];
-				cornerC_id = 4 * tris[tri_id + 2];
+				Triangle tri = trisScreen[tri_id];
 
-				float wA, wB, wC;
-				wA = pos[cornerA_id + 3];
-				wB = pos[cornerB_id + 3];
-				wC = pos[cornerC_id + 3];
+				if (tex == null || texVertRaw == null)
+				{
+					int[] coXr = new int[] {
+						Math.round(tri.xA()),
+						Math.round(tri.xB()),
+						Math.round(tri.xC())
+					};
+					int[] coYr = new int[] {
+						Math.round(tri.yA()),
+						Math.round(tri.yB()),
+						Math.round(tri.yC())
+					};
+					// grp.setColor(colorFill);
+					// grp.fillPolygon(coX, coY, 3);
+					grp.setColor(colorDraw);
+					grp.drawPolygon(coXr, coYr, 3);
 
-				if (Math.abs(wA) < 1e-5 ||
-					Math.abs(wB) < 1e-5 ||
-					Math.abs(wC) < 1e-5) continue;
+					continue;
+				}
 
-				int[] coordsX = new int[] {
-					Math.round(pos[cornerA_id + 0] / wA),
-					Math.round(pos[cornerB_id + 0] / wB),
-					Math.round(pos[cornerC_id + 0] / wC)
-				};
-				int[] coordsY = new int[] {
-					Math.round(pos[cornerA_id + 1] / wA),
-					Math.round(pos[cornerB_id + 1] / wB),
-					Math.round(pos[cornerC_id + 1] / wC)
-				};
-				float cornerA_z = pos[cornerA_id + 2] / wA;
-				float cornerB_z = pos[cornerB_id + 2] / wB;
-				float cornerC_z = pos[cornerC_id + 2] / wC;
+				Integer[] ordX = new Integer[] { 0, 1, 2 };
+				Integer[] ordY = new Integer[] { 0, 1, 2 };
 
-				grp.setColor(colorFill);
-				grp.fillPolygon(coordsX, coordsY, 3);
-				grp.setColor(colorDraw);
-				grp.drawPolygon(coordsX, coordsY, 3);
+				Arrays.sort(ordX, (Integer a, Integer b) ->
+					((int) Math.signum(tri.v[4*a + 0] - tri.v[4*b + 0])));
+
+				Arrays.sort(ordY, (Integer a, Integer b) ->
+					((int) Math.signum(tri.v[4*a + 1] - tri.v[4*b + 1])));
+
+				float[] coX = new float[] { tri.xA(), tri.xB(), tri.xC() };
+				float[] coY = new float[] { tri.yA(), tri.yB(), tri.yC() };
+				float[] coZ = new float[] { tri.zA(), tri.zB(), tri.zC() };
+				float[] coS = new float[] { tri.sA(), tri.sB(), tri.sC() };
+				float[] coT = new float[] { tri.tA(), tri.tB(), tri.tC() };
+
+				// beginning of texture unit loop
+				// for (int tex_id = 0; tex_id < NUM_TEXTURE_UNITS; tex_id++)
+				// {
+
+				float drawX, drawY, rHorizon,
+					yTop, yMid,         yBot,
+					xTop, xMidL, xMidR, xBot,
+					zTop, zMidL, zMidR, zBot,
+					sTop, sMidL, sMidR, sBot,
+					tTop, tMidL, tMidR, tBot,
+					xL, xR, zL, zR, sL, sR, tL, tR, z, s, t;
+
+				xTop  = coX[ordY[0]];
+				xMidL = coX[ordY[1]];
+				xBot  = coX[ordY[2]];
+				yTop  = coY[ordY[0]];
+				yMid  = coY[ordY[1]];
+				yBot  = coY[ordY[2]];
+				zTop  = coZ[ordY[0]];
+				zMidL = coZ[ordY[1]];
+				zBot  = coZ[ordY[2]];
+
+				sTop  = coS[ordY[0]];
+				sMidL = coS[ordY[1]];
+				sBot  = coS[ordY[2]];
+				tTop  = coT[ordY[0]];
+				tMidL = coT[ordY[1]];
+				tBot  = coT[ordY[2]];
+
+				rHorizon = (yMid - yTop) / (yBot - yTop);
+
+				xMidR = xTop + rHorizon * (xBot - xTop);
+				zMidR = zTop + rHorizon * (zBot - zTop);
+				sMidR = sTop + rHorizon * (sBot - sTop);
+				tMidR = tTop + rHorizon * (tBot - tTop);
+
+				if (xMidL > xMidR)
+				{
+					float temp;
+					temp = xMidL; xMidL = xMidR; xMidR = temp;
+					temp = zMidL; zMidL = zMidR; zMidR = temp;
+					temp = sMidL; sMidL = sMidR; sMidR = temp;
+					temp = tMidL; tMidL = tMidR; tMidR = temp;
+				}
+
+				// Draw upper "half" of the triangle
+				for (int y = Math.round(yTop); y < Math.round(yMid); y++)
+				{
+					drawY = (y - yTop) / (yMid - yTop);
+					drawY = Math.max(0f, Math.min(drawY, 1f));
+					xL = xTop + drawY * (xMidL - xTop);
+					xR = xTop + drawY * (xMidR - xTop);
+					zL = zTop + drawY * (zMidL - zTop);
+					zR = zTop + drawY * (zMidR - zTop);
+					sL = sTop + drawY * (sMidL - sTop);
+					sR = sTop + drawY * (sMidR - sTop);
+					tL = tTop + drawY * (tMidL - tTop);
+					tR = tTop + drawY * (tMidR - tTop);
+					for (int x = Math.round(xL); x < Math.round(xR); x++)
+					{
+						try {
+							drawX = (x - xL) / (xR - xL);
+							drawX = Math.max(0f, Math.min(drawX, 1f));
+							z = zL + drawX * (zR - zL);
+							if (this.depthBuffer[this.vieww * y + x] < z)
+								continue;
+							else
+								this.depthBuffer[this.vieww * y + x] = z;
+
+							s = sL + drawX * (sR - sL);
+							t = tL + drawX * (tR - tL);
+							ras.setPixel(x, y, teximg.getPixelArr(
+								Math.round(s), Math.round(t)
+							));
+						} catch (Exception ex) {
+							ex.printStackTrace();
+						}
+					}
+				}
+
+				// Draw lower "half" of the triangle
+				for (int y = Math.round(yMid); y < Math.round(yBot); y++)
+				{
+					drawY = 1f - (y - yMid) / (yBot - yMid);
+					drawY = Math.max(0f, Math.min(drawY, 1f));
+					xL = xBot + drawY * (xMidL - xBot);
+					xR = xBot + drawY * (xMidR - xBot);
+					zL = zBot + drawY * (zMidL - zBot);
+					zR = zBot + drawY * (zMidR - zBot);
+					sL = sBot + drawY * (sMidL - sBot);
+					sR = sBot + drawY * (sMidR - sBot);
+					tL = tBot + drawY * (tMidL - tBot);
+					tR = tBot + drawY * (tMidR - tBot);
+					for (int x = Math.round(xL); x < Math.round(xR); x++)
+					{
+						try {
+							drawX = (x - xL) / (xR - xL);
+							drawX = Math.max(0f, Math.min(drawX, 1f));
+							z = zL + drawX * (zR - zL);
+							if (this.depthBuffer[this.vieww * y + x] < z)
+								continue;
+							else
+								this.depthBuffer[this.vieww * y + x] = z;
+
+							s = sL + drawX * (sR - sL);
+							t = tL + drawX * (tR - tL);
+							ras.setPixel(x, y, teximg.getPixelArr(
+								Math.round(s), Math.round(t)
+							));
+						} catch (Exception ex) {
+							ex.printStackTrace();
+						}
+					}
+				}
+
+				// }
+				// end of texture unit loop
+
 			}
 
 			grp.setColor(colorOrig);

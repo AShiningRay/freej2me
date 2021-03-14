@@ -18,31 +18,146 @@ package javax.microedition.m3g;
 
 public abstract class Transformable extends Object3D
 {
+	private Transform matrix = new Transform();
+	private Transform scale = new Transform();
+	private Transform rotate = new Transform();
+	private Transform translate = new Transform();
 
-	public void getCompositeTransform(Transform transform) {  }
+	public void getCompositeTransform(Transform transform)
+	{
+		if (transform == null)
+			throw new java.lang.NullPointerException();
 
-	public void getOrientation(float[] angleAxis) {  }
+		transform.setIdentity();
+		transform.preMultiply(this.matrix);
+		transform.preMultiply(this.scale);
+		transform.preMultiply(this.rotate);
+		transform.preMultiply(this.translate);
+	}
 
-	public void getScale(float[] xyz) {  }
+	public void getOrientation(float[] angleAxis)
+	{
+		if (angleAxis == null)
+			throw new java.lang.NullPointerException();
+		if (angleAxis.length < 4)
+			throw new java.lang.IllegalArgumentException();
 
-	public void getTransform(Transform transform) {  }
+		float[] m = new float[16];
+		this.rotate.get(m);
+		float angle, ax, ay, az, al;
+		ax = m[4*2 + 1] - m[4*1 + 2];
+		ay = m[4*0 + 2] - m[4*2 + 0];
+		az = m[4*1 + 0] - m[4*0 + 1];
+		al = (float) Math.sqrt(
+			Math.pow(ax, 2) + Math.pow(ay, 2) + Math.pow(az, 2)
+		);
+		if (al == 0f)
+		{
+			angleAxis[0] = 0f;
+			angleAxis[1] = 0f;
+			angleAxis[2] = 0f;
+			angleAxis[3] = 0f;
+			return;
+		}
+		ax /= al; ay /= al; az /= al;
+		angle = (float) Math.toDegrees(Math.asin(al / 2));
+		angleAxis[0] = angle;
+		angleAxis[1] = ax;
+		angleAxis[2] = ay;
+		angleAxis[3] = az;
+	}
 
-	public void getTranslation(float[] xyz) {  }
+	public void getScale(float[] xyz)
+	{
+		if (xyz == null)
+			throw new java.lang.NullPointerException();
+		if (xyz.length < 3)
+			throw new java.lang.IllegalArgumentException();
 
-	public void postRotate(float angle, float ax, float ay, float az) {  }
+		float[] m = new float[16];
+		this.scale.get(m);
+		xyz[0] = m[4*0 + 0];
+		xyz[1] = m[4*1 + 1];
+		xyz[2] = m[4*2 + 2];
+	}
 
-	public void preRotate(float angle, float ax, float ay, float az) {  }
+	public void getTransform(Transform transform)
+	{
+		if (transform == null)
+			throw new java.lang.NullPointerException();
 
-	public void scale(float sx, float sy, float sz) {  }
+		transform.set(this.matrix);
+	}
 
-	public void setOrientation(float angle, float ax, float ay, float az) {  }
+	public void getTranslation(float[] xyz)
+	{
+		if (xyz == null)
+			throw new java.lang.NullPointerException();
+		if (xyz.length < 3)
+			throw new java.lang.IllegalArgumentException();
 
-	public void setScale(float sx, float sy, float sz) {  }
+		float[] m = new float[16];
+		this.translate.get(m);
+		xyz[0] = m[4*0 + 3];
+		xyz[1] = m[4*1 + 3];
+		xyz[2] = m[4*2 + 3];
+	}
 
-	public void setTransform(Transform transform) {  }
+	public void postRotate(float angle, float ax, float ay, float az)
+	{
+		this.rotate.postRotate(angle, ax, ay, az);
+	}
 
-	public void setTranslation(float tx, float ty, float tz) {  }
+	public void preRotate(float angle, float ax, float ay, float az)
+	{
+		this.rotate.preRotate(angle, ax, ay, az);
+	}
 
-	public void translate(float tx, float ty, float tz) {  }
+	public void scale(float sx, float sy, float sz)
+	{
+		this.scale.preScale(sx, sy, sz);
+	}
+
+	public void setOrientation(float angle, float ax, float ay, float az)
+	{
+		this.rotate.setIdentity();
+		this.rotate.preRotate(angle, ax, ay, az);
+	}
+
+	public void setScale(float sx, float sy, float sz)
+	{
+		this.scale.setIdentity();
+		this.scale.preScale(sx, sy, sz);
+	}
+
+	public void setTransform(Transform transform)
+	{
+		if (transform == null)
+			transform = new Transform();
+
+		if (this instanceof Node)
+		{
+			float[] m = new float[16];
+			transform.get(m);
+			if (m[4*3+0] != 0 ||
+				m[4*3+1] != 0 ||
+				m[4*3+2] != 0 ||
+				m[4*3+3] != 1)
+				throw new java.lang.IllegalArgumentException();
+		}
+
+		this.matrix = new Transform(transform);
+	}
+
+	public void setTranslation(float tx, float ty, float tz)
+	{
+		this.translate.setIdentity();
+		this.translate.preTranslate(tx, ty, tz);
+	}
+
+	public void translate(float tx, float ty, float tz)
+	{
+		this.translate.preTranslate(tx, ty, tz);
+	}
 
 }

@@ -73,6 +73,7 @@ public class TriangleStripArray extends IndexBuffer
 			{
 				int x,y,z;
 				int abs_index = in_offset + i;
+				boolean swap = i % 2 == 1;
 
 				if (isExplicit)
 				{
@@ -87,9 +88,10 @@ public class TriangleStripArray extends IndexBuffer
 					z = indices[0] + abs_index + 2;
 				}
 
-				super.indices[out_offset + 0] = x;
-				super.indices[out_offset + 1] = y;
-				super.indices[out_offset + 2] = z;
+				// TODO determine correct way to swap vertices
+				super.indices[out_offset + 0] = swap ? x : x;
+				super.indices[out_offset + 1] = swap ? y : y;
+				super.indices[out_offset + 2] = swap ? z : z;
 
 				out_offset += 3;
 			}

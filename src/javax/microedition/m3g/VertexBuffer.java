@@ -93,14 +93,14 @@ public class VertexBuffer extends Object3D
 		if (index < 0 || Graphics3D.NUM_TEXTURE_UNITS - 1 < index)
 			throw new java.lang.IndexOutOfBoundsException();
 
-		if (scaleBias == null)
+		if (scaleBias == null || this.texCoords[index] == null)
 			return this.texCoords[index];
 
-		if (scaleBias.length < this.texCoords[index].getVertexCount() + 1)
+		if (scaleBias.length < this.texCoords[index].getComponentCount() + 1)
 			throw new java.lang.IllegalArgumentException();
 
 		scaleBias[0] = this.texCoordScale[index];
-		for (int i = 0; i < this.texCoords[index].getVertexCount(); i++)
+		for (int i = 0; i < this.texCoords[index].getComponentCount(); i++)
 			scaleBias[i + 1] = this.texCoordBias[index][i];
 
 		return this.texCoords[index];

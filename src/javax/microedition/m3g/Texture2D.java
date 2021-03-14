@@ -16,6 +16,8 @@
 */
 package javax.microedition.m3g;
 
+import java.lang.Math;
+
 public class Texture2D extends Transformable
 {
 
@@ -33,38 +35,117 @@ public class Texture2D extends Transformable
 
 	private int blending = FUNC_ADD;
 	private int blendcolor = 0;
-	private int filter = FILTER_LINEAR;
-	private int filterlevel = FILTER_BASE_LEVEL;
+	private int imageFilter = FILTER_LINEAR;
+	private int levelFilter = FILTER_BASE_LEVEL;
 	private int wraps = WRAP_CLAMP;
 	private int wrapt = WRAP_CLAMP;
 
 	private Image2D texImage;
 
-	public Texture2D(Image2D image) {  }
+	public Texture2D(Image2D image)
+	{
+		this.setImage(image);
+		this.wraps = WRAP_REPEAT;
+		this.wrapt = WRAP_REPEAT;
+		this.levelFilter = FILTER_BASE_LEVEL;
+		this.imageFilter = FILTER_NEAREST;
+		this.blending = FUNC_MODULATE;
+		this.blendcolor = 0x00000000;
+	}
 
 
-	public int getBlendColor() { return blendcolor; }
+	public int getBlendColor()
+	{
+		return this.blendcolor;
+	}
 
-	public int getBlending() { return blending; }
+	public int getBlending()
+	{
+		return this.blending;
+	}
 
-	public Image2D getImage() { return texImage; }
+	public Image2D getImage()
+	{
+		return this.texImage;
+	}
 
-	public int getImageFilter() { return filter; }
+	public int getImageFilter()
+	{
+		return this.imageFilter;
+	}
 
-	public int getLevelFilter() { return filterlevel; }
+	public int getLevelFilter()
+	{
+		return this.levelFilter;
+	}
 
-	public int getWrappingS() { return wraps; }
+	public int getWrappingS()
+	{
+		return this.wraps;
+	}
 
-	public int getWrappingT() { return wrapt; }
+	public int getWrappingT()
+	{
+		return this.wrapt;
+	}
 
-	public void setBlendColor(int RGB) {  }
+	public void setBlendColor(int RGB)
+	{
+		this.blendcolor = RGB;
+	}
 
-	public void setBlending(int func) { blending = func; }
+	public void setBlending(int func)
+	{
+		if (func != FUNC_REPLACE &&
+			func != FUNC_MODULATE &&
+			func != FUNC_DECAL &&
+			func != FUNC_BLEND &&
+			func != FUNC_ADD)
+			throw new java.lang.IllegalArgumentException();
 
-	public void setFiltering(int levelFilter, int imageFilter) { filterlevel = levelFilter; filter = imageFilter; }
+		this.blending = func;
+	}
 
-	public void setImage(Image2D image) { texImage = image; }
+	public void setFiltering(int levelFilter, int imageFilter)
+	{
+		if ((levelFilter != FILTER_BASE_LEVEL &&
+			 levelFilter != FILTER_NEAREST &&
+			 levelFilter != FILTER_LINEAR) ||
+			(imageFilter != FILTER_NEAREST &&
+			 imageFilter != FILTER_LINEAR))
+			throw new java.lang.IllegalArgumentException();
 
-	public void setWrapping(int wrapS, int wrapT) { wraps = wrapS; wrapt = wrapT; }
+		this.levelFilter = levelFilter;
+		this.imageFilter = imageFilter;
+	}
 
+	public void setImage(Image2D image)
+	{
+		if (image == null)
+			throw new java.lang.NullPointerException();
+		if (image.getWidth() > Graphics3D.MAX_TEXTURE_DIMENSION ||
+			image.getHeight() > Graphics3D.MAX_TEXTURE_DIMENSION ||
+			!isPositivePowerOfTwo(image.getWidth()) ||
+			!isPositivePowerOfTwo(image.getHeight()))
+			throw new java.lang.IllegalArgumentException();
+
+		this.texImage = image;
+	}
+
+	public void setWrapping(int wrapS, int wrapT)
+	{
+		if ((wrapS != WRAP_CLAMP && wrapS != WRAP_REPEAT) ||
+			(wrapT != WRAP_CLAMP && wrapT != WRAP_REPEAT))
+			throw new java.lang.IllegalArgumentException();
+
+		this.wraps = wrapS;
+		this.wrapt = wrapT;
+	}
+
+	private static boolean isPositivePowerOfTwo(int value)
+	{
+		int log2v = (int) Math.round(Math.log(value) / Math.log(2));
+		int pow2v = (int) Math.round(Math.pow(2, log2v));
+		return value == pow2v && log2v >= 0;
+	}
 }
