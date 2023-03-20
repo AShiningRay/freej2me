@@ -58,154 +58,145 @@ public class VertexBuffer extends Object3D
 	}
 
 
-	public VertexArray getColors()
-	{
-		return this.colors;
-	}
+	public VertexArray getColors() { return this.colors; }
 
-	public int getDefaultColor()
-	{
-		return this.defaultColor;
-	}
+	public int getDefaultColor() { return this.defaultColor; }
 
-	public VertexArray getNormals()
-	{
-		return this.normals;
-	}
+	public VertexArray getNormals() { return this.normals; }
 
 	public VertexArray getPositions(float[] scaleBias)
 	{
-		if (scaleBias == null)
-			return this.positions;
-
-		if (scaleBias.length < 4)
-			throw new java.lang.IllegalArgumentException();
-
-		scaleBias[0] = this.positionScale;
-		for (int i = 0; i < 3; i++)
-			scaleBias[i + 1] = this.positionBias[i];
-
+		if (scaleBias != null)
+		{
+			/* As per JSR-184, throw IllegalArgumentException if (scaleBias != null) && (scaleBias.length < 4). */
+			if(scaleBias.length < 4) { throw new IllegalArgumentException("ScaleBias has invalid length (less than 4)."); }
+			
+			scaleBias[0] = this.positionScale;
+			for (int i = 0; i < 3; i++)
+				scaleBias[i + 1] = this.positionBias[i];
+		}
 		return this.positions;
 	}
 
 	public VertexArray getTexCoords(int index, float[] scaleBias)
 	{
+		/* As per JSR-184, throw IndexOutOfBoundsException if index != [0,N] where N is the implementation specific maximum texturing unit index*/
 		if (index < 0 || Graphics3D.NUM_TEXTURE_UNITS - 1 < index)
-			throw new java.lang.IndexOutOfBoundsException();
+			{ throw new IndexOutOfBoundsException("Tried to access invalid texture unit index."); }
 
-		if (scaleBias == null || this.texCoords[index] == null)
-			return this.texCoords[index];
+		if (scaleBias != null && this.texCoords[index] != null)
+		{
+			/* Also per JSR-184, throw IllegalArgumentException if (scaleBias != null) && (scaleBias.length < texCoords.getComponentCount+1). */
+			if (scaleBias.length < this.texCoords[index].getComponentCount() + 1)
+				{ throw new IllegalArgumentException("Invalid scaleBias length."); }
 
-		if (scaleBias.length < this.texCoords[index].getComponentCount() + 1)
-			throw new java.lang.IllegalArgumentException();
-
-		scaleBias[0] = this.texCoordScale[index];
-		for (int i = 0; i < this.texCoords[index].getComponentCount(); i++)
-			scaleBias[i + 1] = this.texCoordBias[index][i];
-
+			scaleBias[0] = this.texCoordScale[index];
+			for (int i = 0; i < this.texCoords[index].getComponentCount(); i++)
+				{ scaleBias[i + 1] = this.texCoordBias[index][i]; }
+		}
 		return this.texCoords[index];
 	}
 
-	public int getVertexCount()
-	{
-		return this.length;
-	}
+	public int getVertexCount() { return this.length; }
 
 	public void setColors(VertexArray colors)
 	{
-		if (colors == null)
+		if (colors == null) { this.colors = null; } 
+		else
 		{
-			this.colors = null;
-			return;
+			/* 
+			 * As per JSR-184, throw IllegalArgumentException if: 
+			 * (colors != null) && (colors.getComponentType != 1)
+			 * (colors != null) && (colors.getComponentCount != {3,4})
+			 * (colors != null) && (colors.getVertexCount != getVertexCount) && (at least one other VertexArray is set)
+			 */
+			if (colors.getComponentType() != 1 || colors.getComponentCount() < 3 || 4 < colors.getComponentCount() || (this.fixed && colors.getVertexCount() != this.length))
+				{ throw new IllegalArgumentException("Trying to set colors with invalid context."); }
+
+			this.updateLength(colors.getVertexCount());
+			this.colors = colors;
 		}
-
-		if (colors.getComponentType() != 1 ||
-			colors.getComponentCount() < 3 || 4 < colors.getComponentCount() ||
-			(this.fixed && colors.getVertexCount() != this.length))
-			throw new java.lang.IllegalArgumentException();
-
-		this.updateLength(colors.getVertexCount());
-		this.colors = colors;
 	}
 
-	public void setDefaultColor(int ARGB)
-	{
-		this.defaultColor = ARGB;
-	}
+	public void setDefaultColor(int ARGB) { this.defaultColor = ARGB; }
 
 	public void setNormals(VertexArray normals)
 	{
-		if (normals == null)
+		if (normals == null) { this.normals = null; }
+		else
 		{
-			this.normals = null;
-			return;
+			/* 
+			 * As per JSR-184, throw IllegalArgumentException if: 
+			 * (normals != null) && (normals.getComponentCount != 3)
+			 * (normals != null) && (normals.getVertexCount != getVertexCount) && (at least one other VertexArray is set)
+			 */
+			if (normals.getComponentCount() != 3 || (this.fixed && normals.getVertexCount() != this.length))
+				{ throw new IllegalArgumentException("Trying to set colors with invalid context."); }
+
+			this.updateLength(normals.getVertexCount());
+			this.normals = normals;
 		}
-
-		if (normals.getComponentCount() != 3 ||
-			(this.fixed && normals.getVertexCount() != this.length))
-			throw new java.lang.IllegalArgumentException();
-
-		this.updateLength(normals.getVertexCount());
-		this.normals = normals;
 	}
 
 	public void setPositions(VertexArray positions, float scale, float[] bias)
 	{
-		if (positions == null)
+		if (positions == null) { this.positions = null; }
+		else
 		{
-			this.positions = null;
-			return;
+			/* 
+			 * As per JSR-184, throw IllegalArgumentException if:
+			 * (positions != null) && (positions.getComponentCount != 3
+			 * (positions != null) && (positions.getVertexCount != getVertexCount) && (at least one other VertexArray is set)
+			 * (positions != null) && (bias != null) && (bias.length < 3)
+			 */
+			if (positions.getComponentCount() != 3 || (this.fixed && positions.getVertexCount() != this.length) || (bias != null && bias.length < 3))
+				{ throw new IllegalArgumentException("Trying to set positions with invalid context."); }
+
+			if (bias == null) { bias = new float[3]; }
+
+			this.updateLength(positions.getVertexCount());
+			this.positions = positions;
+			this.positionScale = scale;
+			this.positionBias = bias;
 		}
-
-		if (positions.getComponentCount() != 3 ||
-			(this.fixed && positions.getVertexCount() != this.length) ||
-			(bias != null && bias.length < 3))
-			throw new java.lang.IllegalArgumentException();
-
-		if (bias == null)
-			bias = new float[3];
-
-		this.updateLength(positions.getVertexCount());
-		this.positions = positions;
-		this.positionScale = scale;
-		this.positionBias = bias;
 	}
 
-	public void setTexCoords(
-		int index,
-		VertexArray texCoords,
-		float scale,
-		float[] bias
-	) {
+	public void setTexCoords( int index, VertexArray texCoords, float scale, float[] bias) 
+	{
+		/* As per JSR-184, throw IndexOutOfBoundsException if if index != [0,N] where N is the implementation specific maximum texturing unit index. */
 		if (index < 0 || Graphics3D.NUM_TEXTURE_UNITS - 1 < index)
-			throw new java.lang.IndexOutOfBoundsException();
+			{ throw new IndexOutOfBoundsException("Tried to access invalid texture unit index."); }
 
-		if (texCoords == null) {
-			this.texCoords[index] = null;
-			return;
+		if (texCoords == null) { this.texCoords[index] = null; }
+		else
+		{
+			int componentCount = texCoords.getComponentCount();
+
+			/* 
+			 * Also per JSR-184, throw IllegalArgumentException if:
+			 * (texCoords != null) && (texCoords.getComponentCount != {2,3})
+			 * (texCoords != null) && (texCoords.getVertexCount != getVertexCount) && (at least one other VertexArray is set)
+			 * (texCoords != null) && (bias != null) && (bias.length < texCoords.getComponentCount)
+			 */
+			if (componentCount < 2 || 3 < componentCount || (this.fixed && texCoords.getVertexCount() != this.length) || (bias != null && bias.length < componentCount))
+				{ throw new IllegalArgumentException("Trying to set Texture Coordinates with invalid context."); }
+
+			if (bias == null) { bias = new float[componentCount]; }
+
+			this.updateLength(texCoords.getVertexCount());
+			this.texCoords[index] = texCoords;
+			this.texCoordScale[index] = scale;
+			this.texCoordBias[index] = bias;
 		}
-
-		int componentCount = texCoords.getComponentCount();
-
-		if (componentCount < 2 || 3 < componentCount ||
-			(this.fixed && texCoords.getVertexCount() != this.length) ||
-			(bias != null && bias.length < componentCount))
-			throw new java.lang.IllegalArgumentException();
-
-		if (bias == null)
-			bias = new float[componentCount];
-
-		this.updateLength(texCoords.getVertexCount());
-		this.texCoords[index] = texCoords;
-		this.texCoordScale[index] = scale;
-		this.texCoordBias[index] = bias;
 	}
 
 	private void updateLength(int length)
 	{
-		if (this.fixed) return;
-		this.fixed = true;
-		this.length = length;
+		if (!this.fixed)
+		{
+			this.fixed = true;
+			this.length = length;
+		}
 	}
 
 }

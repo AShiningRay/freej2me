@@ -79,6 +79,10 @@ public class Graphics3D
 
 	public Graphics3D()
 	{
+		/* 
+		 * The default depth range used is that of window coordinates, so 0 to near, and 1 to far
+		 * JSR-184 specifies that Normalized Device Coordinates (NDC) can also be used, which ranges from -1 to 1.
+		 */
 		this.near = 0;
 		this.far = 1;
 		this.currCam = null;
@@ -90,11 +94,10 @@ public class Graphics3D
 
 	public int addLight(Light light, Transform transform)
 	{
-		if (light == null)
-			throw new java.lang.NullPointerException();
+		/* As per JSR-184, addLight() must throw a NullPointerException if no light is given */
+		if (light == null) { throw new NullPointerException("addLight() was called but no light object was provided."); }
 
-		if (transform == null)
-			transform = new Transform();
+		if (transform == null) { transform = new Transform(); }
 
 		this.currLights.add(light);
 		this.currLightTrans.add(transform);
@@ -103,24 +106,32 @@ public class Graphics3D
 
 	public void bindTarget(Object target)
 	{
+		/* Calls the method below specifying the depth buffer as enabled, and no render hints, as per JSR-184. */
 		this.bindTarget(target, true, 0);
 	}
 
 	public void bindTarget(Object target, boolean depthBuffer, int hints)
 	{
+		/* 
+		 * As per JSR-184, this function returns: 
+		 * NullPointerException: If no render target is received as argument
+		 * IllegalStateException: If the current Graphics3D Object already has a render target
+		 */
 		if (target == null)
-			throw new java.lang.NullPointerException();
+			{ throw new NullPointerException("bindTarget() was called but no render target was provided."); }
 		if (this.target != null)
-			throw new java.lang.IllegalStateException();
+			{ throw new IllegalStateException("This Graphics3D object already has a render target."); }
 
+		/* The target can be an Image2D Object, or a Graphics Object (PlatformGraphics in our case). */
 		if (target instanceof Image2D)
 		{
 			Image2D i2d = (Image2D) target;
 
-			if (i2d.getFormat() != Image2D.RGB &&
-				i2d.getFormat() != Image2D.RGBA)
-				throw new java.lang.IllegalArgumentException();
+			/* JSR-184 specifies that Image2D render targets can only have RGB or RGBA format. */
+			if (i2d.getFormat() != Image2D.RGB && i2d.getFormat() != Image2D.RGBA)
+			{ throw new IllegalArgumentException("Received a 2D render target with invalid internal format"); }
 
+			/* It's a 2D image, so paint the canvas with it starting from the top-left corner */
 			this.viewx = 0;
 			this.viewy = 0;
 			this.vieww = i2d.getWidth();
@@ -140,13 +151,20 @@ public class Graphics3D
 			this.viewy = grp.getClipY();
 			this.vieww = grp.getClipWidth();
 			this.viewh = grp.getClipHeight();
-		} else
-			throw new java.lang.IllegalArgumentException();
+		} else 
+		{
+			/* If it is neither of those, throw an IllegalArgumentException as per JSR-184. */ 
+			throw new IllegalArgumentException("Received render target is neither an instance of Image2D nor Graphics");
+		}
 
-		if (this.vieww > MAX_VIEWPORT_WIDTH ||
-			this.viewh > MAX_VIEWPORT_HEIGHT ||
-			(hints & ~(ANTIALIAS | DITHER | TRUE_COLOR | OVERWRITE)) != 0)
-			throw new java.lang.IllegalArgumentException();
+		/* 
+		 * The final check performed before binding throws IllegalArgumentException if:
+		 * 1 - The render target's width is larger than the max supported.
+		 * 2 - The render target's height is taller than the max supported.
+		 * 3 - The render hint is an OR bitmask that matches with one or more of [ANTIALIAS, DITHER, TRUE_COLOR, OVERWRITE], or not zero.
+		 */
+		if (this.vieww > MAX_VIEWPORT_WIDTH || this.viewh > MAX_VIEWPORT_HEIGHT || (hints & ~(ANTIALIAS | DITHER | TRUE_COLOR | OVERWRITE)) != 0)
+			{ throw new IllegalArgumentException("Render target either has larger dimensions than supported, or the render hint is invalid"); }
 
 		this.target = target;
 		this.depthBuffer = new float[this.vieww * this.viewh];
@@ -156,14 +174,15 @@ public class Graphics3D
 
 	public void clear(Background background)
 	{
-		if (this.target == null)
-			throw new java.lang.IllegalStateException();
+		/* As per JSR-184, throw IllegalStateException if this Graphics3D object does not have a render target. */
+		if (this.target == null) { throw new IllegalStateException("Cannot clear Background on a Graphics3D without a render target."); }
 
 		int color = 0;
 		int x = viewx;
 		int y = viewy;
 		int w = vieww;
 		int h = viewh;
+		/* Force clearing both color and depth for now. TODO: Get those requests from background object. */
 		boolean clearColor = true;
 		boolean clearDepth = true;
 
@@ -178,6 +197,12 @@ public class Graphics3D
 			clearDepth = background.isDepthClearEnabled();
 		}
 
+		/* 
+		 * If the background object is null: 
+		 * Color buffer is cleared to transparent black 
+		 * Depth buffer is cleared to the max depth value, 1.0.
+		 */
+
 		if (clearColor)
 		{
 			if (this.target instanceof Image2D)
@@ -187,9 +212,8 @@ public class Graphics3D
 				// CHECK is the bg image used only if clearColor is true?
 
 				// TODO do this check in the PlatformGraphics branch too
-				if (background.getImage() == null ||
-					background.getImage().getFormat() != i2d.getFormat())
-					throw new java.lang.IllegalArgumentException();
+				if (background.getImage() == null || background.getImage().getFormat() != i2d.getFormat())
+				{ throw new IllegalArgumentException("The background image to be cleared does not have the same format as the render target."); }
 
 				// TODO support clearing Image2D
 			}
@@ -201,54 +225,36 @@ public class Graphics3D
 			}
 		}
 
-		if (clearDepth)
-			Arrays.fill(this.depthBuffer, this.far);
+		if (clearDepth) { Arrays.fill(this.depthBuffer, this.far); }
 	}
 
 	public Camera getCamera(Transform transform)
 	{
-		if (transform != null)
-			transform.set(this.currCamTrans);
+		if (transform != null) { transform.set(this.currCamTrans); }
 		return this.currCam;
 	}
 
-	public float getDepthRangeFar()
-	{
-		return far;
-	}
+	public float getDepthRangeFar() { return far; }
 
-	public float getDepthRangeNear()
-	{
-		return near;
-	}
+	public float getDepthRangeNear() { return near;}
 
-	public int getHints()
-	{
-		return hints;
-	}
+	public int getHints() { return hints; }
 
-	public static Graphics3D getInstance()
-	{
-		return Mobile.getGraphics3D();
-	}
+	public static Graphics3D getInstance() { return Mobile.getGraphics3D(); }
 
 	public Light getLight(int index, Transform transform)
 	{
-		if (index < 0 ||
-			index > this.currLights.size())
-			throw new java.lang.IndexOutOfBoundsException();
+		/* As per JSR-184, throw IndexOutOfBoundsException if the requested light index is out of bounds. */
+		if (index < 0 || index > this.currLights.size()) { throw new IndexOutOfBoundsException("The received light index is out of bounds."); }
 
-		if (transform != null)
-			transform.set(this.currLightTrans.get(index));
+		/* If a transform variable is received, use it to store the requested light's transform. */
+		if (transform != null) { transform.set(this.currLightTrans.get(index)); }
 
 		return this.currLights.get(index);
 	}
 
-	public int getLightCount()
-	{
-		// This is supposed to include nulls, so just return the size
-		return this.currLights.size();
-	}
+	/* This is supposed to include nulls, so just return the size */
+	public int getLightCount() { return this.currLights.size(); }
 
 	public static Hashtable getProperties()
 	{
@@ -275,86 +281,70 @@ public class Graphics3D
 		return Graphics3D.properties;
 	}
 
-	public Object getTarget()
-	{
-		return this.target;
-	}
+	public Object getTarget() { return this.target; }
 
-	public int getViewportHeight()
-	{
-		return viewh;
-	}
+	public int getViewportHeight() { return viewh; }
 
-	public int getViewportWidth()
-	{
-		return vieww;
-	}
+	public int getViewportWidth() { return vieww; }
 
-	public int getViewportX()
-	{
-		return viewx;
-	}
+	public int getViewportX() { return viewx; }
 
-	public int getViewportY()
-	{
-		return viewy;
-	}
+	public int getViewportY() { return viewy; }
 
-	public boolean isDepthBufferEnabled()
-	{
-		return this.depthEnabled;
-	}
+	public boolean isDepthBufferEnabled() { return this.depthEnabled; }
 
 	public void releaseTarget()
 	{
-		this.target = null;
+		/* Ignore the call if no render target is bound. */
+		if(this.target != null) 
+		{
+			/* 
+			 * TODO: Flush the rendered 3D image to this target before releasing it 
+			 * in order to ensure that the 3D image becomes visible.
+			 */
+			
+			/* If there is a render target, release it */ 
+			this.target = null;
+		}
 	}
 
 	public void render(Node node, Transform transform)
 	{
-		if (node == null)
-			throw new java.lang.NullPointerException();
-		if (!(
-			node instanceof Sprite3D ||
-			node instanceof Mesh ||
-			node instanceof Group))
-			throw new java.lang.IllegalArgumentException();
-		if (this.target == null ||
-			this.currCam == null)
-			throw new java.lang.IllegalStateException();
+		/* As per JSR-184, throw NullPointerException if no node is received. */
+		if(node == null) { throw new NullPointerException("render() was called but no node was provided."); }
+	
+		/* Also per JSR-184, throw IllegalStateException if this method is called but there's no camera or render target available. */ 
+		if (this.target == null || this.currCam == null) 
+			{ throw new IllegalStateException("render() was called but there is no camera or render target."); }
+
+		/* Also per JSR-184, throw IllegalStateException if if node is not a Sprite3D, Mesh, or Group Object. */
+		if (!(node instanceof Mesh || node instanceof Sprite3D || node instanceof Group)) 
+			{ throw new IllegalArgumentException("Node is not an instance of any of the following: Sprite3D, Mesh, Group"); }
 
 		// if any Mesh that is rendered violates the constraints defined in
 		//    Mesh, MorphingMesh, SkinnedMesh, VertexBuffer, or IndexBuffer
 		//    throw new java.lang.IllegalStateException();
 
+		/* Receiving a null transform indicates that the identity matrix must be used. */
+		if (transform == null) { transform = new Transform(); }
+
 		System.out.println("Graphics3D.render NT");
 		// TODO implement Graphics3D.render(Node, Transform)
 	}
 
-	public void render(
-		VertexBuffer vertices,
-		IndexBuffer triangles,
-		Appearance appearance,
-		Transform transform
-	) {
-		this.render(vertices, triangles, appearance, transform, -1);
-	}
+	public void render(VertexBuffer vertices, IndexBuffer triangles, Appearance appearance, Transform transform) 
+	{ this.render(vertices, triangles, appearance, transform, -1); }
 
-	public void render(
-		VertexBuffer vertices,
-		IndexBuffer triangles,
-		Appearance appearance,
-		Transform transform,
-		int scope
-	) {
-		if (vertices == null ||
-			triangles == null ||
-			appearance == null)
-			throw new java.lang.NullPointerException();
-		if (this.target == null ||
-			this.currCam == null)
-			throw new java.lang.IllegalStateException();
+	public void render( VertexBuffer vertices, IndexBuffer triangles, Appearance appearance, Transform transform, int scope) 
+	{
+		/* TODO: Check the scope used by the submesh to find out which lights need to be applied, if it needs to be rendered, etc. */
 
+		/* As per JSR-184, if vertices, triangles or appearence are null, throw a NullPointerException. */
+		if (vertices == null || triangles == null || appearance == null) { throw new NullPointerException("Tried to render a submesh with incomplete info."); }
+		
+		/* Also per JSR-184, throw IllegalStateException if the application tries to render without having set up a render target or camera beforehand. */
+		if (this.target == null || this.currCam == null) { throw new IllegalStateException("Tried to render a submesh without having a render target or camera first."); }
+		
 		// if `vertices` or `triangles` violates the constraints
 		//    defined in VertexBuffer or IndexBuffer
 		//    throw new java.lang.IllegalStateException();
@@ -442,8 +432,7 @@ public class Graphics3D
 		tr.preScale(1, -1, 1);
 		tr.preTranslate(1, 1, 0);
 		tr.preScale((float) vieww / 2f, (float) viewh / 2f, 1f);
-		if (teximg != null)
-			textr.preScale(teximg.getWidth(), teximg.getHeight(), 1);
+		if (teximg != null) { textr.preScale(teximg.getWidth(), teximg.getHeight(), 1); }
 		// -> Screen space
 
 		// Perform viewport transform
@@ -451,6 +440,7 @@ public class Graphics3D
 
 		if (this.target instanceof Image2D)
 		{
+			System.out.println("Render Target is instance of Image2D!");
 			Image2D i2d = (Image2D) this.target;
 			// TODO support rendering to Image2D
 		}
@@ -462,8 +452,8 @@ public class Graphics3D
 			WritableRaster ras = img.getRaster();
 
 			Color colorOrig = grp.getColor();
-			Color colorFill = new Color(0, 0, 224, 32);
-			Color colorDraw = new Color(0, 0, 0, 128);
+			Color colorFill = new Color(0, 0, 0, 255); //new Color(0, 0, 224, 255);
+			Color colorDraw = new Color(255, 255, 255, 128);
 
 			for (int tri_id = 0; tri_id < trisScreen.length; tri_id++)
 			{
@@ -481,8 +471,8 @@ public class Graphics3D
 						Math.round(tri.yB()),
 						Math.round(tri.yC())
 					};
-					// grp.setColor(colorFill);
-					// grp.fillPolygon(coX, coY, 3);
+					grp.setColor(colorFill);
+					grp.fillPolygon(coXr, coYr, 3);
 					grp.setColor(colorDraw);
 					grp.drawPolygon(coXr, coYr, 3);
 
@@ -575,9 +565,7 @@ public class Graphics3D
 
 							s = sL + drawX * (sR - sL);
 							t = tL + drawX * (tR - tL);
-							ras.setPixel(x, y, teximg.getPixelArr(
-								Math.round(s), Math.round(t)
-							));
+							ras.setPixel(x, y, teximg.getPixelArr(Math.round(s), Math.round(t)));
 						} catch (Exception ex) {
 							ex.printStackTrace();
 						}
@@ -610,9 +598,7 @@ public class Graphics3D
 
 							s = sL + drawX * (sR - sL);
 							t = tL + drawX * (tR - tL);
-							ras.setPixel(x, y, teximg.getPixelArr(
-								Math.round(s), Math.round(t)
-							));
+							ras.setPixel(x, y, teximg.getPixelArr(Math.round(s), Math.round(t)));
 						} catch (Exception ex) {
 							ex.printStackTrace();
 						}
@@ -630,26 +616,35 @@ public class Graphics3D
 
 	public void render(World world)
 	{
-		if (world == null)
-			throw new java.lang.NullPointerException();
-		if (this.target == null)
-			throw new java.lang.IllegalStateException();
+		/* As per JSR-184, throw NullPointerException if the received world is null. */
+		if (world == null) { throw new NullPointerException("render(world) was called but no world was provided."); }
+		
+		/* Also per JSR-184, throw IllegalStateException this object has no render target yet. */
+		if (this.target == null) { throw new IllegalStateException("render(world) was called but there is no render target."); }
 
-		// if `world` has no active camera, or
-		//    the active camera is not in that `world`
-		//    throw new java.lang.IllegalStateException();
+		/* 
+		 * if `world` has no active camera, or
+		 * the active camera is not in that `world`
+		 * throw new IllegalStateException();
+		 */
 
-		// if the bg-img of `world` is not the same format as `this.target`:
-		//    throw new java.lang.IllegalStateException();
+		/* 
+		 * if the bg-img of `world` is not the same format as `this.target`:
+		 * throw new IllegalStateException();
+		 */
 
-		// if any Mesh that is rendered violates the constraints defined in
-		//    Mesh, MorphingMesh, SkinnedMesh, VertexBuffer, or IndexBuffer
-		//    throw new java.lang.IllegalStateException();
+		/* 
+		 * if any Mesh that is rendered violates the constraints defined in
+		 * Mesh, MorphingMesh, SkinnedMesh, VertexBuffer, or IndexBuffer
+		 * throw new IllegalStateException();
+		 */
 
-		// if the Transform from the active camera of `world`
-		//    to the world space is uninvertible
-		//    throw new java.lang.ArithmeticException();
-		// Note: this will be thrown by Transform.invert() if appropriate
+		/* 
+		 * if the Transform from the active camera of `world`
+		 * to the world space is uninvertible
+		 * throw new ArithmeticException();
+		 * Note: this will be thrown by Transform.invert() if appropriate
+		 */
 
 		System.out.println("Graphics3D.render W");
 		// TODO implement Graphics3D.render(World)
@@ -664,31 +659,35 @@ public class Graphics3D
 	public void setCamera(Camera camera, Transform transform)
 	{
 		this.currCam = camera;
-		if (transform == null)
-			this.currCamTrans = null;
-		else
+
+		/* If no transform is given, the identity matrix is used as per JSR-184. */
+		if (transform == null) 
+		{ 
+			this.currCamTrans = new Transform();
+			this.currCamTransInv = new Transform();
+		}
+		else /* Else, set the transform and its inverse accordingly. */
+		{
 			this.currCamTrans = new Transform(transform);
 			this.currCamTransInv = new Transform(transform);
-			this.currCamTransInv.invert();
+		}
+		this.currCamTransInv.invert(); /* This one will execute regardless of the given transform above. */
 	}
 
 	public void setDepthRange(float near, float far)
 	{
-		if (near < 0 || 1 < near || far < 0 || 1 < far)
-			throw new java.lang.IllegalArgumentException();
-
-		this.near = near;
-		this.far = far;
+		/* As per JSR-184, throw IllegalArgumentException if the received near and/or far planes have unsupported values. */
+		if (near < 0 || far < 0 || 1 < near || 1 < far) { throw new IllegalArgumentException("The requested Depth Range values are invalid."); }
+		else { this.near=near; this.far=far; }	
 	}
 
 	public void setLight(int index, Light light, Transform transform)
 	{
-		if (index < 0 ||
-			index > this.currLights.size())
-			throw new java.lang.IndexOutOfBoundsException();
+		/* As per JSR-184, throw IndexOutOfBoundsException if index < 0 or index > CurrentAmountOfLights. */
+		if (index < 0 || index > this.currLights.size()) { throw new IndexOutOfBoundsException("Tried to modify a Light on an out-of-bounds index."); }
 
-		if (transform == null)
-			transform = new Transform();
+		/* If no transform is received, use the identity matrix. */
+		if (transform == null) { transform = new Transform(); }
 
 		// Indices are NOT supposed to change here,
 		// so we're simply updating the arrays at the index,
@@ -699,10 +698,9 @@ public class Graphics3D
 
 	public void setViewport(int x, int y, int width, int height)
 	{
-		if (width <= 0 || height <= 0 ||
-			width > MAX_VIEWPORT_WIDTH ||
-			height > MAX_VIEWPORT_HEIGHT)
-			throw new java.lang.IllegalArgumentException();
+		/* As per JSR-184, throw IllegalArgumentException if the received width and height are < 0, or beyond the max allowed. */
+		if (width <= 0 || height <= 0 || width > MAX_VIEWPORT_WIDTH || height > MAX_VIEWPORT_HEIGHT)
+			{ throw new IllegalArgumentException("Tried to set a viewport of unsupported size."); }
 
 		this.viewx = x;
 		this.viewy = y;

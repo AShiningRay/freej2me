@@ -23,45 +23,45 @@ public class TriangleStripArray extends IndexBuffer
 
 	public TriangleStripArray(int[] indices, int[] stripLengths)
 	{
-		if (indices == null || stripLengths == null)
-			throw new java.lang.NullPointerException();
-		if (stripLengths.length == 0)
-			throw new java.lang.IllegalArgumentException();
-		if (Arrays.stream(stripLengths).anyMatch(e -> e < 3))
-			throw new java.lang.IllegalArgumentException();
-		if (indices.length < Arrays.stream(stripLengths).sum())
-			throw new java.lang.IllegalArgumentException();
-		if (Arrays.stream(indices).anyMatch(e -> e < 0 || 65535 < e))
-			throw new java.lang.IndexOutOfBoundsException();
+		/* Per JSR-184, throw NullPointerException if indices or stripLengths are null */
+		if(indices == null || stripLengths == null) { throw new NullPointerException("Tried to construct a TriangleStripArray with incomplete information."); }
+	
+		/* Also per JSR-184, throw IllegalArgumentException if: 
+		 * stripLengths is empty, any element in stripLengths is less than 3, or indices.length < sum(stripLengths). */
+		if(stripLengths.length == 0 || indices.length < Arrays.stream(stripLengths).sum() || Arrays.stream(stripLengths).anyMatch(e -> e < 3))
+			{ throw new IllegalArgumentException("Cannot construct TriangleStripArray, incorrect parameters received."); }
 
+		/* also per JSR-184, throw IndexOutOfBoundsException if any element in indices is negative, or greater than 65535. */
+		if(Arrays.stream(indices).anyMatch(e -> e < 0 || 65535 < e)) 
+			{ throw new IndexOutOfBoundsException("Index provided to TriangleStripArray is out of bounds."); }
+
+		/* Setup the StripArray with explicit indices. */
 		this.updateFields(true, indices, stripLengths);
 	}
 
 	public TriangleStripArray(int firstIndex, int[] stripLengths)
 	{
-		if (stripLengths == null)
-			throw new java.lang.NullPointerException();
-		if (stripLengths.length == 0)
-			throw new java.lang.IllegalArgumentException();
-		if (Arrays.stream(stripLengths).anyMatch(e -> e < 3))
-			throw new java.lang.IllegalArgumentException();
-		if (firstIndex < 0)
-			throw new java.lang.IndexOutOfBoundsException();
-		if (firstIndex + Arrays.stream(stripLengths).sum() > 65535)
-			throw new java.lang.IndexOutOfBoundsException();
+		/* As per JSR-184, throw NullPointerException if stripLengths == null. */
+		if(stripLengths == null) { throw new NullPointerException("Tried to construct TriangleStripArray with null stripLengths."); }
+	
+		/* Also per JSR-184, throw IllegalArgumentException if stripLengths.length == 0 or any element in stripLengths is less than 3. */
+		if(stripLengths.length == 0 || java.util.Arrays.stream(stripLengths).anyMatch(e -> e < 3)) 
+			{ throw new IllegalArgumentException("Cannot construct TriangleStripArray, incorrect parameters received."); }
 
+		/* Also per JSR-184, throw IndexOutOfBoundsException if any element in indices is negative, or if firstIndex + sum(stripLengths) is greater than 65535. */
+		if(firstIndex < 0 || firstIndex + java.util.Arrays.stream(stripLengths).sum() > 65535)
+			{ throw new IndexOutOfBoundsException("Index provided to TriangleStripArray is out of bounds."); }
+
+		/* Setup the StripArray with implicit indices. */
 		this.updateFields(false, new int[] { firstIndex }, stripLengths);
 	}
 
-	private void updateFields(
-		boolean isExplicit,
-		int[] indices,
-		int[] stripLengths
-	) {
-		super.indexCount = Arrays.stream(stripLengths)
-			.map(e -> (e - 2) * 3)
-			.sum();
+	private void updateFields(boolean isExplicit, int[] indices, int[] stripLengths) 
+	{
+		/* Update the number of indices from the parent by mapping all valid StripLength elements. */
+		super.indexCount = Arrays.stream(stripLengths).map(e -> (e - 2) * 3).sum();
 
+		/* Update parent's indices by copying this object's indices to it. */
 		super.indices = new int[this.indexCount];
 
 		int  in_offset = 0;
@@ -93,8 +93,11 @@ public class TriangleStripArray extends IndexBuffer
 				super.indices[out_offset + 1] = swap ? y : y;
 				super.indices[out_offset + 2] = swap ? z : z;
 
+				/* Move to the next vertex on the parent object. */
 				out_offset += 3;
 			}
+			
+			/* Move to the next vertex on this StripArray. */
 			in_offset += stripLengths[strip_id];
 		}
 	}

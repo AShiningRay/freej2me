@@ -25,9 +25,10 @@ public class Camera extends Node
 	public static final int PARALLEL = 49;
 	public static final int PERSPECTIVE = 50;
 
-	private int projMode;
-	private float[] projMatrix; // Same kind of matrix as in Transform.
-	private float[] params;     // params: { fovy, aspectRatio, near, far }
+	private int projMode; /* Can be set to one of the projection modes above. */
+	private float[] projMatrix; /* A 4D Projection Matrix represented as 1D array to allow the direct usage of Transform.get() and Transform.set(). */
+	/* Based on JSR-184, the camera object has 4 main parameters: fovy, aspectRatio, near, and far. */
+	private float[] params;
 
 	public Camera()
 	{
@@ -44,87 +45,66 @@ public class Camera extends Node
 
 	public int getProjection(float[] params)
 	{
-		if (params == null) return this.projMode;
-		if (params.length < 4) throw new IllegalArgumentException();
+		/* As per JSR-184, throw IllegalArgumentException if the received params array has less than 4 positions. */
+		if(params.length < 4) throw new IllegalArgumentException("The received camera params array has less than 4 positions. Can't copy parameters to it. ");
 
-		if (this.projMode != GENERIC)
-			for (int i = 0; i < 4; i++)
-				params[i] = this.params[i];
+		if (this.projMode != GENERIC && params != null) { System.arraycopy(this.params, 0, params, 0, 4); }
 
 		return this.projMode;
 	}
 
 	public int getProjection(Transform transform)
 	{
-		if (transform == null) return this.projMode;
+		if (transform != null)
+		{
+			/* 
+			 * As per JSR-184, throw ArithmeticException if the transform matrix cannot be computed because of 
+			 * illegal perspective or parallel projection parameters. 
+			 */
+			if (this.projMode != GENERIC && this.params[2] == this.params[3])
+				{ throw new ArithmeticException("Illegal projection parameters."); }
 
-		// Since the projection matrix is only computed in this stage,
-		// checking the correctness of the projection parameters is done here.
-		//                                        near == far
-		if (this.projMode != GENERIC && this.params[2] == this.params[3])
-			throw new java.lang.ArithmeticException();
-
-		// The computation of the projection matrix is only done if requested.
-		// To prevent repeating the same computation, the matrix is cached.
-		// This cache is re-set to null by `setParallel` and `setPerspective`.
-		if (this.projMatrix == null) this.computeMatrix();
-
-		// The method name says `GET`, but `transform.SET` is called.
-		//
-		// Here we *get* the projection from `this.projMatrix`
-		//     and *set* the inner matrix of `transform` to that
-		//
-		//  .------------------.
-		//  v                  |
+			/* 
+			 * The computation of the projection matrix is only done if requested.
+			 * To prevent repeating the same computation, the matrix is cached.
+			 * This cache is re-set to null by `setParallel` and `setPerspective`.
+			 */
+			if (this.projMatrix == null) this.computeMatrix();
+		}
+		/* Copies the current projection matrix to the given transform, and returns the current projection mode. */
 		transform.set(this.projMatrix);
 		return this.projMode;
 	}
 
 	public void setGeneric(Transform transform)
 	{
-		if (transform == null) throw new java.lang.NullPointerException();
+		/* As per JSR-184, throw NullPointerException if the received transform is null. */
+		if(transform == null) { throw new NullPointerException("Tried to set GENERIC projection mode without providing a transform."); }
 
-		// The method name says `SET`, but `transform.GET` is called.
-		//
-		// Here we *get* the inner matrix of `transform`
-		//     and *set* `this.projMatrix` to that
-		//
-		//  .------------------.
-		//  |                  v
+		/* Copies the current camera projection matrix to the given transform, and sets projection mode to GENERIC. */
 		transform.get(this.projMatrix);
 		this.projMode = GENERIC;
 	}
 
-	public void setParallel(
-		float fovy,
-		float aspectRatio,
-		float near,
-		float far
-	) {
-		if (fovy <= 0 || aspectRatio <= 0)
-			throw new java.lang.IllegalArgumentException();
+	public void setParallel(float fovy, float aspectRatio, float near, float far) 
+	{
+		/* As per JSR-18, throw IllegalArgumentException if height or aspectRatio <= 0. */
+		if(fovy <= 0 || aspectRatio <= 0) 
+			{ throw new IllegalArgumentException("Tried to set parallel projection with negative FOV or aspect ratio."); }
 
-		// The projection matrix is computed
-		// only when `getProjection(Transform)` is called.
+		/* Clears the Projection Matrix (it has to be computed again), sets the mode to PARALLEL projection, and sets the camera parameters. */
 		this.projMatrix = null;
 		this.projMode = PARALLEL;
-		this.params = new float[] {
-			fovy, aspectRatio, near, far
-		};
+		this.params = new float[] { fovy, aspectRatio, near, far };
 	}
 
-	public void setPerspective(
-		float fovy,
-		float aspectRatio,
-		float near,
-		float far
-	) {
-		if (fovy <= 0 || 180 <= fovy ||
-			aspectRatio <= 0 || near <= 0 || far <= 0)
-			throw new java.lang.IllegalArgumentException();
+	public void setPerspective(float fovy, float aspectRatio, float near, float far) 
+	{
+		/* As per JSR-184, throw IllegalArgumentException if any of the arguments is <= 0, or fovy > 180. */
+		if(fovy <= 0 || 180 <= fovy || aspectRatio <= 0 || near <= 0 || far <= 0) 
+			{ throw new IllegalArgumentException("Tried to set perspective projection with invalid parameters."); }
 
-		// The projection matrix is computed
-		// only when `getProjection(Transform)` is called.
+		/* Clears the Projection Matrix (it has to be computed again), sets the mode to PERSPECTIVE projection, and sets the camera parameters. */
 		this.projMatrix = null;
 		this.projMode = PERSPECTIVE;
 		this.params = new float[] {
@@ -141,38 +121,34 @@ public class Camera extends Node
 
 		float h, w, d, b;
 
-		switch (this.projMode)
+		if (this.projMode == PARALLEL) /* If it's parallel, calculate the matrix based on setParallel. */
 		{
-			case PARALLEL:
+			h = fovy;
+			w = aspectRatio * h;
+			d = Math.abs(far - near);
+			b = near + far;
 
-				h = fovy;
-				w = aspectRatio * h;
-				d = Math.abs(far - near);
-				b = near + far;
+			this.projMatrix = new float[] 
+			{
+				2/w,  0 ,   0 ,   0 ,
+				 0 , 2/h,   0 ,   0 ,
+				 0 ,  0 , -2/d, -b/d,
+				 0 ,  0 ,   0 ,   1
+			};
+		} else if (this.projMode == PERSPECTIVE) /* If it's perspective, calculate the matrix based on setPerspective. */
+		{
+			h = (float) Math.tan(Math.toRadians(fovy)/2f);
+			w = aspectRatio * h;
+			d = Math.abs(far - near);
+			b = near + far;
 
-				this.projMatrix = new float[] {
-					2/w,  0 ,   0 ,   0 ,
-					 0 , 2/h,   0 ,   0 ,
-					 0 ,  0 , -2/d, -b/d,
-					 0 ,  0 ,   0 ,   1
-				};
-
-				break;
-			case PERSPECTIVE:
-
-				h = (float) Math.tan(Math.toRadians(fovy)/2f);
-				w = aspectRatio * h;
-				d = Math.abs(far - near);
-				b = near + far;
-
-				this.projMatrix = new float[] {
-					1/w,  0 ,   0 ,       0      ,
-					 0 , 1/h,   0 ,       0      ,
-					 0 ,  0 , -b/d, -2*near*far/d,
-					 0 ,  0 ,  -1 ,       0
-				};
-
-				break;
+			this.projMatrix = new float[] 
+			{
+				1/w,  0 ,   0 ,       0      ,
+				 0 , 1/h,   0 ,       0      ,
+				 0 ,  0 , -b/d, -2*near*far/d,
+				 0 ,  0 ,  -1 ,       0
+			};
 		}
 	}
 

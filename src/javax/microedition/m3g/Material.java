@@ -24,25 +24,78 @@ public class Material extends Object3D
 	public static final int EMISSIVE = 4096;
 	public static final int SPECULAR = 8192;
 
-
-	private int color;
-	private float shine;
+	private int ambientColor;
+	private int diffuseColor;
+	private int emissiveColor;
+	private int specularColor;
+	private float shininess;
 	private boolean tracking;
 
+	public Material() 
+	{  
+		this.tracking = false;
+		this.ambientColor = 0x00333333;
+		this.diffuseColor = 0xFFCCCCCC;
+		this.emissiveColor = 0x00000000;
+		this.specularColor = 0x00000000;
+		this.shininess = 0f;
+	}
 
-	public Material() {  }
+	public int getColor(int target) 
+	{ 
+		/* As per JSR-184, throw IllegalArgumentException if target has a value other than AMBIENT, DIFFUSSE, EMISSIVE or SPECULAR. */
+		if(target != AMBIENT || target != DIFFUSE || target != EMISSIVE || target != SPECULAR) 
+			{ throw new IllegalArgumentException("Tried to get invalid color component from material."); }
+		
+		switch(target)
+		{
+			case AMBIENT:
+				return this.ambientColor; 
+			case DIFFUSE:
+				return this.diffuseColor;
+			case EMISSIVE:
+				return this.emissiveColor;
+			case SPECULAR:
+				return this.specularColor;
+		}
 
+		return this.ambientColor; 
+	}
 
-	public int getColor(int target) { return color; }
+	public float getShininess() { return this.shininess; }
 
-	public float getShininess() { return shine; }
+	public boolean isVertexColorTrackingEnabled() { return this.tracking; }
 
-	public boolean isVertexColorTrackingEnabled() { return tracking; }
+	public void setColor(int target, int ARGB) 
+	{ 
+		/* As per JSR-184, throw IllegalArgumentException if target has a value other than an inclusive OR of one or more of AMBIENT, DIFFUSE, EMISSIVE, SPECULAR. */
+		if((target & ~(AMBIENT | DIFFUSE | EMISSIVE | SPECULAR)) != 0) 
+			{throw new IllegalArgumentException("Trying to set material color on invalid material component."); }
+		
+		switch(target)
+		{
+			case AMBIENT:
+				this.ambientColor = ARGB;
+				break;
+			case DIFFUSE:
+				this.diffuseColor = ARGB;
+				break;
+			case EMISSIVE:
+				this.emissiveColor = ARGB;
+				break;
+			case SPECULAR:
+				this.specularColor = ARGB;
+		}
+	}
 
-	public void setColor(int target, int ARGB) { color=ARGB; }
+	public void setShininess(float shininess) 
+	{ 
+		/* As per JSR-184, throw IllegalArgumentException if shininess > 128(1f) or < 0(0f). */
+		if(shininess < 0f || shininess > 1f) { throw new IllegalArgumentException("Material received invalid shininess value."); }
+		
+		this.shininess = shininess; 
+	}
 
-	public void setShininess(float shininess) { shine=shininess; }
-
-	public void setVertexColorTrackingEnable(boolean enable) { tracking = enable; }
+	public void setVertexColorTrackingEnable(boolean enable) { this.tracking = enable; }
 
 }

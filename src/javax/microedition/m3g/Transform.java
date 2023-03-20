@@ -38,28 +38,86 @@ public class Transform
 
 	public Transform(Transform transform)
 	{
-		if (transform == null) throw new java.lang.NullPointerException();
+		/* As per JSR-184, throw NullPointerException if the given transform is null. */
+		if(transform == null) { throw new NullPointerException("Cannot initialize with a null transform."); }
+
 		this.matrix = transform.matrix.clone();
 	}
 
 	public void get(float[] matrix)
 	{
-		if (matrix == null) throw new java.lang.NullPointerException();
-		if (matrix.length < 16) throw new java.lang.IllegalArgumentException();
-		for (int i = 0; i < 16; i++)
-			matrix[i] = this.matrix[i];
+		/* As per JSR-184, throw NullPointerException if the given matrix is null.*/
+		if(matrix == null) { throw new NullPointerException("Cannot copy the matrix contents to a null object."); }
+
+		/* Also per JSR-184, throw IllegalArgumentException if the matrix length is less than 16.*/
+		if(matrix.length < 16) { throw new IllegalArgumentException("The received matrix is not a valid 4x4 transform matrix."); }
+
+		System.arraycopy(this.matrix, 0, matrix, 0, 16);
 	}
 
 	public void invert()
 	{
-		// TODO Check if the current matrix is invertible in a fast way,
-		//      and only use `slowInvert` if there is no other way.
-		this.slowInvert();
+		/* The inverse matrix is calculated by using an adapted version of the Laplace Expansion Theorem. */
+
+		/*
+		 * Since the matrix is a linear array, the logic is akin to C's pointer arithmethic 
+		 * on matrices, where accesses to mat[row][col] becomes mat[4*row + col].
+		 */
+		float s0 = this.matrix[4*0 + 0] * this.matrix[4*1 + 1] - this.matrix[4*1 + 0] * this.matrix[4*0 + 1];
+    	float s1 = this.matrix[4*0 + 0] * this.matrix[4*1 + 2] - this.matrix[4*1 + 0] * this.matrix[4*0 + 2];
+    	float s2 = this.matrix[4*0 + 0] * this.matrix[4*1 + 3] - this.matrix[4*1 + 0] * this.matrix[4*0 + 3];
+		float s3 = this.matrix[4*0 + 1] * this.matrix[4*1 + 2] - this.matrix[4*1 + 1] * this.matrix[4*0 + 2];
+		float s4 = this.matrix[4*0 + 1] * this.matrix[4*1 + 3] - this.matrix[4*1 + 1] * this.matrix[4*0 + 3];
+		float s5 = this.matrix[4*0 + 2] * this.matrix[4*1 + 3] - this.matrix[4*1 + 2] * this.matrix[4*0 + 3];
+
+		float c0 = this.matrix[4*2 + 0] * this.matrix[4*3 + 1] - this.matrix[4*3 + 0] * this.matrix[4*2 + 1];
+		float c1 = this.matrix[4*2 + 0] * this.matrix[4*3 + 2] - this.matrix[4*3 + 0] * this.matrix[4*2 + 2];
+		float c2 = this.matrix[4*2 + 0] * this.matrix[4*3 + 3] - this.matrix[4*3 + 0] * this.matrix[4*2 + 3];
+		float c3 = this.matrix[4*2 + 1] * this.matrix[4*3 + 2] - this.matrix[4*3 + 1] * this.matrix[4*2 + 2];
+		float c4 = this.matrix[4*2 + 1] * this.matrix[4*3 + 3] - this.matrix[4*3 + 1] * this.matrix[4*2 + 3];
+		float c5 = this.matrix[4*2 + 2] * this.matrix[4*3 + 3] - this.matrix[4*3 + 2] * this.matrix[4*2 + 3];
+		
+		/* 
+		 * Check if the transform matrix can be inverted by calculating its determinant.
+		 */
+		float determinant = (float) 1.0 / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0);
+
+		/* If it can't, throw ArithmeticException as per JSR-184. */
+		if(determinant == 0) { throw new ArithmeticException("This transform matrix cannot be inverted."); }
+
+		/* Calculate the inverse. */
+		float[] inverseMatrix = new float[]
+		{
+			( this.matrix[4*1 + 1] * c5 - this.matrix[4*1 + 2] * c4 + this.matrix[4*1 + 3] * c3) * determinant,
+			(-this.matrix[4*0 + 1] * c5 + this.matrix[4*0 + 2] * c4 - this.matrix[4*0 + 3] * c3) * determinant,
+			( this.matrix[4*3 + 1] * s5 - this.matrix[4*3 + 2] * s4 + this.matrix[4*3 + 3] * s3) * determinant,
+			(-this.matrix[4*2 + 1] * s5 + this.matrix[4*2 + 2] * s4 - this.matrix[4*2 + 3] * s3) * determinant,
+
+			(-this.matrix[4*1 + 0] * c5 + this.matrix[4*1 + 2] * c2 - this.matrix[4*1 + 3] * c1) * determinant,
+			( this.matrix[4*0 + 0] * c5 - this.matrix[4*0 + 2] * c2 + this.matrix[4*0 + 3] * c1) * determinant,
+			(-this.matrix[4*3 + 0] * s5 + this.matrix[4*3 + 2] * s2 - this.matrix[4*3 + 3] * s1) * determinant,
+			( this.matrix[4*2 + 0] * s5 - this.matrix[4*2 + 2] * s2 + this.matrix[4*2 + 3] * s1) * determinant,
+
+			( this.matrix[4*1 + 0] * c4 - this.matrix[4*1 + 1] * c2 + this.matrix[4*1 + 3] * c0) * determinant,
+			(-this.matrix[4*0 + 0] * c4 + this.matrix[4*0 + 1] * c2 - this.matrix[4*0 + 3] * c0) * determinant,
+			( this.matrix[4*3 + 0] * s4 - this.matrix[4*3 + 1] * s2 + this.matrix[4*3 + 3] * s0) * determinant,
+			(-this.matrix[4*2 + 0] * s4 + this.matrix[4*2 + 1] * s2 - this.matrix[4*2 + 3] * s0) * determinant,
+
+			(-this.matrix[4*1 + 0] * c3 + this.matrix[4*1 + 1] * c1 - this.matrix[4*1 + 2] * c0) * determinant,
+			( this.matrix[4*0 + 0] * c3 - this.matrix[4*0 + 1] * c1 + this.matrix[4*0 + 2] * c0) * determinant,
+			(-this.matrix[4*3 + 0] * s3 + this.matrix[4*3 + 1] * s1 - this.matrix[4*3 + 2] * s0) * determinant,
+			( this.matrix[4*2 + 0] * s3 - this.matrix[4*2 + 1] * s1 + this.matrix[4*2 + 2] * s0) * determinant
+		};
+
+		/* Make the inverse matrix be the transform's matrix. */
+		this.matrix = inverseMatrix;
 	}
 
 	public void postMultiply(Transform transform)
 	{
-		if (transform == null) throw new java.lang.NullPointerException();;
+		/* As per JSR-184, throw NullPointerException if the given transform is null. */
+		if(transform == null) { throw new NullPointerException("Cannot multiply by receiving a null transform."); }
+	
 		this.matrix = Transform.multiply(
 			this.matrix,
 			transform.matrix
@@ -88,15 +146,20 @@ public class Transform
 
 	public void set(float[] matrix)
 	{
-		if (matrix == null) throw new java.lang.NullPointerException();
-		if (matrix.length < 16) throw new java.lang.IllegalArgumentException();
-		for (int i = 0; i < 16; i++)
-			this.matrix[i] = matrix[i];
+		/* As per JSR-184, throw NullPointerException if the given matrix is null. */
+		if(matrix == null) { throw new NullPointerException("Tried setting the transform with a null matrix."); }
+
+		/* Also per JSR-184, IllegalArgumentException if matrix.length < 16 (not a 4x4 matrix). */
+		if(matrix.length < 16) { throw new IllegalArgumentException("Cannot copy data from a matrix with less than 16 elements."); }
+
+		System.arraycopy(matrix, 0, this.matrix, 0, 16);
 	}
 
 	public void set(Transform transform)
 	{
-		if (transform == null) throw new java.lang.NullPointerException();
+		/* As per JSR-184, throw NullPointerException if the given transform is null. */
+		if(transform == null) { throw new NullPointerException("Tried to set a null transform."); }
+
 		this.matrix = transform.matrix.clone();
 	}
 
@@ -112,41 +175,41 @@ public class Transform
 
 	public void transform(float[] vectors)
 	{
-		if (vectors == null) throw new java.lang.NullPointerException();
-		if (vectors.length % 4 != 0)
-			throw new java.lang.IllegalArgumentException();
+		/* As per JSR-184, throw NullPointerException if the given vector is null. */
+		if(vectors == null) { throw new NullPointerException("Cannot transform a null vector."); }
+		
+		/* Also per JSR-184, throw IllegalArgumentException if the given vector is not a flat array of quadruplets. */
+		if(vectors.length % 4 != 0) { throw new IllegalArgumentException("Cannot transform a vector array that's not multiple of 4."); }
 
-		float[] m = this.matrix;
+		/* Multiply each 4D vector with this transform's matrix by quadruplets, hence the vector offset of 4. */
 		for (int offset = 0; offset < vectors.length; offset += 4)
 		{
 			float[] result = new float[4];
 			for (int row = 0; row < 4; row++)
+			{
 				result[row] =
-					+ m[4*row + 0] * vectors[offset + 0]
-					+ m[4*row + 1] * vectors[offset + 1]
-					+ m[4*row + 2] * vectors[offset + 2]
-					+ m[4*row + 3] * vectors[offset + 3];
-
-			vectors[offset + 0] = result[0];
-			vectors[offset + 1] = result[1];
-			vectors[offset + 2] = result[2];
-			vectors[offset + 3] = result[3];
+					+ this.matrix[4*row + 0] * vectors[offset + 0]
+					+ this.matrix[4*row + 1] * vectors[offset + 1]
+					+ this.matrix[4*row + 2] * vectors[offset + 2]
+					+ this.matrix[4*row + 3] * vectors[offset + 3];
+			}
+			System.arraycopy(result, 0, vectors, offset, 4);
 		}
 	}
 
 	public void transform(VertexArray in, float[] out, boolean W)
 	{
-		if (in == null) throw new java.lang.NullPointerException();
-		if (out == null) throw new java.lang.NullPointerException();
+		/* As per JSR-184, throw NullPointerException if either 'in' or 'out' are null. */
+		if(in == null || out == null) { throw new NullPointerException("Cannot transform since input vertex array or output array are null."); }
 
 		int vertexCount = in.getVertexCount();
 		int vertexDims = in.getComponentCount();
 		boolean pass_z = vertexDims == 3;
-		float w = W ? 1f : 0f;
+		float[] components = new float[4]; /* Temp variables that hold the vector quadruplets (x,y,z,w). */
+		components[3] = W ? 1f : 0f;
 
-		if (vertexDims == 4) throw new java.lang.IllegalArgumentException();
-		if (out.length < 4 * vertexCount)
-			throw new java.lang.IllegalArgumentException();
+		/* Also per JSR-184, throw IllegalArgumentException if numComponents == 4 or out.length < (4 * vertexCount). */
+		if (vertexDims == 4 || out.length < 4 * vertexCount) { throw new IllegalArgumentException("Tried to transform an invalid vertex array."); }
 
 		short[] vertices = new short[vertexCount * vertexDims];
 		in.get(0, vertexCount, vertices);
@@ -157,14 +220,11 @@ public class Transform
 			int  in_offset = vertexIndex * vertexDims;
 			int out_offset = vertexIndex * 4;
 
-			float x =          vertices[in_offset + 0]     ;
-			float y =          vertices[in_offset + 1]     ;
-			float z = pass_z ? vertices[in_offset + 2] : 0f;
+			components[0] =          vertices[in_offset + 0]     ;
+			components[1] =          vertices[in_offset + 1]     ;
+			components[2] = pass_z ? vertices[in_offset + 2] : 0f;
 
-			out[out_offset + 0] = x;
-			out[out_offset + 1] = y;
-			out[out_offset + 2] = z;
-			out[out_offset + 3] = w;
+			System.arraycopy(components, 0, out, out_offset, 4);
 		}
 
 		// Do the transformation on the raw data that is currently in `out`
@@ -174,8 +234,9 @@ public class Transform
 	public void transpose()
 	{
 		float[] old = this.matrix.clone();
-		for (int i = 0; i < 16; i++)
-			this.matrix[4*(i/4) + (i%4)] = old[4*(i%4) + (i/4)];
+
+		/* Transposes the matrix column by column. */
+		for (int i = 0; i < 16; i++) { this.matrix[4*(i/4) + (i%4)] = old[4*(i%4) + (i/4)]; }
 	}
 
 	/* ------------------------- package methods ------------------------- */
@@ -186,7 +247,7 @@ public class Transform
 	// package-private
 	void preMultiply(Transform transform)
 	{
-		if (transform == null) throw new java.lang.NullPointerException();;
+		if (transform == null) { throw new java.lang.NullPointerException("preMultiply() called with null transform."); }
 		this.matrix = Transform.multiply(
 			transform.matrix,
 			this.matrix
@@ -235,9 +296,10 @@ public class Transform
 	// package-private
 	static Transform rotate(float angle, float ax, float ay, float az)
 	{
-		if (angle == 0) return null;
-		if (ax == 0 && ay == 0 && az == 0)
-			throw new java.lang.IllegalArgumentException();
+		/* Only calculate rotation if the angle is not zero. */
+		if (angle == 0) { return null; }
+		/* As per JSR-184, throw IllegalArgumentException if the rotation axis is zero but the angle is not. */
+			if(ax == 0 && ay == 0 && az == 0) { throw new IllegalArgumentException("The rotation axis is zero."); }
 
 		// Compute sine and cosine of the angle
 		double rad = Math.toRadians(angle);
@@ -264,13 +326,11 @@ public class Transform
 	// package-private
 	static Transform rotateQuat(float qx, float qy, float qz, float qw)
 	{
-		if (qx == 0 && qy == 0 && qz == 0 && qw == 0)
-			throw new java.lang.IllegalArgumentException();
+		/* As per JSR-184, throw IllegalArgumentException if all quaternion components are zero. */
+		if(qx == 0 && qy == 0 && qz == 0 && qw == 0) { throw new IllegalArgumentException("Cannot rotate when all quaternion components are zero."); }
 
 		// Normalize the quaternion
-		double l = Math.sqrt(
-			Math.pow(qx,2) + Math.pow(qy,2) + Math.pow(qz,2) + Math.pow(qw,2)
-		);
+		double l = Math.sqrt(Math.pow(qx,2) + Math.pow(qy,2) + Math.pow(qz,2) + Math.pow(qw,2));
 		double x = qx / l;
 		double y = qy / l;
 		double z = qz / l;
@@ -289,7 +349,8 @@ public class Transform
 	// package-private
 	static Transform scale(float sx, float sy, float sz)
 	{
-		if (sx == 1 && sy == 1 && sz == 1) return null;
+		/* Only scale if there's a change in scale on any of the axis. */
+		if (sx == 1 && sy == 1 && sz == 1) { return null; }
 
 		float[] scaleMatrix = new float[] {
 			sx,  0,  0, 0,
@@ -304,7 +365,8 @@ public class Transform
 	// package-private
 	static Transform translate(float tx, float ty, float tz)
 	{
-		if (tx == 0 && ty == 0 && tz == 0) return null;
+		/* Only translate if there's actual translation in any axis. */
+		if (tx == 0 && ty == 0 && tz == 0) { return null; }
 
 		float[] translationMatrix = new float[] {
 			1, 0, 0, tx,
@@ -361,8 +423,8 @@ public class Transform
 	private Transform(double[] matrix)
 	{
 		this.matrix = new float[16];
-		for (int i = 0; i < 16; i++)
-			this.matrix[i] = (float) matrix[i];
+		/* System.arraycopy cannot be used here due to type casting. Also there's no java function to implicitly do that like there is for Doubles. */
+		for (int i = 0; i < 16; i++) { this.matrix[i] = (float) matrix[i];}
 	}
 
 	private static float[] multiply(float[] left, float[] right)
@@ -370,101 +432,17 @@ public class Transform
 		float[] result = new float[16];
 
 		for (int row = 0; row < 4; row++)
+		{
 			for (int col = 0; col < 4; col++)
+			{
 				result[4*row + col] =
 					left[4*row + 0] * right[4*0 + col] +
 					left[4*row + 1] * right[4*1 + col] +
 					left[4*row + 2] * right[4*2 + col] +
 					left[4*row + 3] * right[4*3 + col];
-
+			}
+		}
 		return result;
-	}
-
-	private void slowInvert()
-	{
-		float[] m = this.matrix;
-
-		float det =
-			+ m[4*0+3] * m[4*1+2] * m[4*2+1] * m[4*3+0]
-			- m[4*0+2] * m[4*1+3] * m[4*2+1] * m[4*3+0]
-			- m[4*0+3] * m[4*1+1] * m[4*2+2] * m[4*3+0]
-			+ m[4*0+1] * m[4*1+3] * m[4*2+2] * m[4*3+0]
-			+ m[4*0+2] * m[4*1+1] * m[4*2+3] * m[4*3+0]
-			- m[4*0+1] * m[4*1+2] * m[4*2+3] * m[4*3+0]
-			- m[4*0+3] * m[4*1+2] * m[4*2+0] * m[4*3+1]
-			+ m[4*0+2] * m[4*1+3] * m[4*2+0] * m[4*3+1]
-			+ m[4*0+3] * m[4*1+0] * m[4*2+2] * m[4*3+1]
-			- m[4*0+0] * m[4*1+3] * m[4*2+2] * m[4*3+1]
-			- m[4*0+2] * m[4*1+0] * m[4*2+3] * m[4*3+1]
-			+ m[4*0+0] * m[4*1+2] * m[4*2+3] * m[4*3+1]
-			+ m[4*0+3] * m[4*1+1] * m[4*2+0] * m[4*3+2]
-			- m[4*0+1] * m[4*1+3] * m[4*2+0] * m[4*3+2]
-			- m[4*0+3] * m[4*1+0] * m[4*2+1] * m[4*3+2]
-			+ m[4*0+0] * m[4*1+3] * m[4*2+1] * m[4*3+2]
-			+ m[4*0+1] * m[4*1+0] * m[4*2+3] * m[4*3+2]
-			- m[4*0+0] * m[4*1+1] * m[4*2+3] * m[4*3+2]
-			- m[4*0+2] * m[4*1+1] * m[4*2+0] * m[4*3+3]
-			+ m[4*0+1] * m[4*1+2] * m[4*2+0] * m[4*3+3]
-			+ m[4*0+2] * m[4*1+0] * m[4*2+1] * m[4*3+3]
-			- m[4*0+0] * m[4*1+2] * m[4*2+1] * m[4*3+3]
-			- m[4*0+1] * m[4*1+0] * m[4*2+2] * m[4*3+3]
-			+ m[4*0+0] * m[4*1+1] * m[4*2+2] * m[4*3+3];
-
-		// Check if the matrix is invertible
-		if (det == 0) throw new java.lang.ArithmeticException();
-
-		float[] inverted = new float[] {
-			( m[4*1+2]*m[4*2+3]*m[4*3+1] - m[4*1+3]*m[4*2+2]*m[4*3+1]
-			+ m[4*1+3]*m[4*2+1]*m[4*3+2] - m[4*1+1]*m[4*2+3]*m[4*3+2]
-			- m[4*1+2]*m[4*2+1]*m[4*3+3] + m[4*1+1]*m[4*2+2]*m[4*3+3]) / det,
-			( m[4*0+3]*m[4*2+2]*m[4*3+1] - m[4*0+2]*m[4*2+3]*m[4*3+1]
-			- m[4*0+3]*m[4*2+1]*m[4*3+2] + m[4*0+1]*m[4*2+3]*m[4*3+2]
-			+ m[4*0+2]*m[4*2+1]*m[4*3+3] - m[4*0+1]*m[4*2+2]*m[4*3+3]) / det,
-			( m[4*0+2]*m[4*1+3]*m[4*3+1] - m[4*0+3]*m[4*1+2]*m[4*3+1]
-			+ m[4*0+3]*m[4*1+1]*m[4*3+2] - m[4*0+1]*m[4*1+3]*m[4*3+2]
-			- m[4*0+2]*m[4*1+1]*m[4*3+3] + m[4*0+1]*m[4*1+2]*m[4*3+3]) / det,
-			( m[4*0+3]*m[4*1+2]*m[4*2+1] - m[4*0+2]*m[4*1+3]*m[4*2+1]
-			- m[4*0+3]*m[4*1+1]*m[4*2+2] + m[4*0+1]*m[4*1+3]*m[4*2+2]
-			+ m[4*0+2]*m[4*1+1]*m[4*2+3] - m[4*0+1]*m[4*1+2]*m[4*2+3]) / det,
-			( m[4*1+3]*m[4*2+2]*m[4*3+0] - m[4*1+2]*m[4*2+3]*m[4*3+0]
-			- m[4*1+3]*m[4*2+0]*m[4*3+2] + m[4*1+0]*m[4*2+3]*m[4*3+2]
-			+ m[4*1+2]*m[4*2+0]*m[4*3+3] - m[4*1+0]*m[4*2+2]*m[4*3+3]) / det,
-			( m[4*0+2]*m[4*2+3]*m[4*3+0] - m[4*0+3]*m[4*2+2]*m[4*3+0]
-			+ m[4*0+3]*m[4*2+0]*m[4*3+2] - m[4*0+0]*m[4*2+3]*m[4*3+2]
-			- m[4*0+2]*m[4*2+0]*m[4*3+3] + m[4*0+0]*m[4*2+2]*m[4*3+3]) / det,
-			( m[4*0+3]*m[4*1+2]*m[4*3+0] - m[4*0+2]*m[4*1+3]*m[4*3+0]
-			- m[4*0+3]*m[4*1+0]*m[4*3+2] + m[4*0+0]*m[4*1+3]*m[4*3+2]
-			+ m[4*0+2]*m[4*1+0]*m[4*3+3] - m[4*0+0]*m[4*1+2]*m[4*3+3]) / det,
-			( m[4*0+2]*m[4*1+3]*m[4*2+0] - m[4*0+3]*m[4*1+2]*m[4*2+0]
-			+ m[4*0+3]*m[4*1+0]*m[4*2+2] - m[4*0+0]*m[4*1+3]*m[4*2+2]
-			- m[4*0+2]*m[4*1+0]*m[4*2+3] + m[4*0+0]*m[4*1+2]*m[4*2+3]) / det,
-			( m[4*1+1]*m[4*2+3]*m[4*3+0] - m[4*1+3]*m[4*2+1]*m[4*3+0]
-			+ m[4*1+3]*m[4*2+0]*m[4*3+1] - m[4*1+0]*m[4*2+3]*m[4*3+1]
-			- m[4*1+1]*m[4*2+0]*m[4*3+3] + m[4*1+0]*m[4*2+1]*m[4*3+3]) / det,
-			( m[4*0+3]*m[4*2+1]*m[4*3+0] - m[4*0+1]*m[4*2+3]*m[4*3+0]
-			- m[4*0+3]*m[4*2+0]*m[4*3+1] + m[4*0+0]*m[4*2+3]*m[4*3+1]
-			+ m[4*0+1]*m[4*2+0]*m[4*3+3] - m[4*0+0]*m[4*2+1]*m[4*3+3]) / det,
-			( m[4*0+1]*m[4*1+3]*m[4*3+0] - m[4*0+3]*m[4*1+1]*m[4*3+0]
-			+ m[4*0+3]*m[4*1+0]*m[4*3+1] - m[4*0+0]*m[4*1+3]*m[4*3+1]
-			- m[4*0+1]*m[4*1+0]*m[4*3+3] + m[4*0+0]*m[4*1+1]*m[4*3+3]) / det,
-			( m[4*0+3]*m[4*1+1]*m[4*2+0] - m[4*0+1]*m[4*1+3]*m[4*2+0]
-			- m[4*0+3]*m[4*1+0]*m[4*2+1] + m[4*0+0]*m[4*1+3]*m[4*2+1]
-			+ m[4*0+1]*m[4*1+0]*m[4*2+3] - m[4*0+0]*m[4*1+1]*m[4*2+3]) / det,
-			( m[4*1+2]*m[4*2+1]*m[4*3+0] - m[4*1+1]*m[4*2+2]*m[4*3+0]
-			- m[4*1+2]*m[4*2+0]*m[4*3+1] + m[4*1+0]*m[4*2+2]*m[4*3+1]
-			+ m[4*1+1]*m[4*2+0]*m[4*3+2] - m[4*1+0]*m[4*2+1]*m[4*3+2]) / det,
-			( m[4*0+1]*m[4*2+2]*m[4*3+0] - m[4*0+2]*m[4*2+1]*m[4*3+0]
-			+ m[4*0+2]*m[4*2+0]*m[4*3+1] - m[4*0+0]*m[4*2+2]*m[4*3+1]
-			- m[4*0+1]*m[4*2+0]*m[4*3+2] + m[4*0+0]*m[4*2+1]*m[4*3+2]) / det,
-			( m[4*0+2]*m[4*1+1]*m[4*3+0] - m[4*0+1]*m[4*1+2]*m[4*3+0]
-			- m[4*0+2]*m[4*1+0]*m[4*3+1] + m[4*0+0]*m[4*1+2]*m[4*3+1]
-			+ m[4*0+1]*m[4*1+0]*m[4*3+2] - m[4*0+0]*m[4*1+1]*m[4*3+2]) / det,
-			( m[4*0+1]*m[4*1+2]*m[4*2+0] - m[4*0+2]*m[4*1+1]*m[4*2+0]
-			+ m[4*0+2]*m[4*1+0]*m[4*2+1] - m[4*0+0]*m[4*1+2]*m[4*2+1]
-			- m[4*0+1]*m[4*1+0]*m[4*2+2] + m[4*0+0]*m[4*1+1]*m[4*2+2]) / det
-		};
-
-		this.matrix = inverted;
 	}
 
 }

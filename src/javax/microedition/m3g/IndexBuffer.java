@@ -22,19 +22,18 @@ public abstract class IndexBuffer extends Object3D
 	protected int indexCount;
 	protected int[] indices;
 
-	public int getIndexCount()
-	{
-		return this.indexCount;
-	}
+	public int getIndexCount() { return this.indexCount; }
 
 	public void getIndices(int[] indices)
 	{
-		if (indices == null) throw new java.lang.NullPointerException();
+		/* As per JSR-184, throw NullPointerException if the received indices is null. */
+		if(indices == null) {throw new NullPointerException("Tried to get buffer's vertex indices without providing the actual indices."); }
+		
+		/* Also per JSR-184, throw IllegalArgumentException if indices.length < getIndexCount. */
 		if (indices.length < this.indexCount)
-			throw new java.lang.IllegalArgumentException();
+			{ throw new IllegalArgumentException("Tried to return vertex indices to an array that's smaller than the object's number of indices."); }
 
-		for (int i = 0; i < this.indexCount; i++)
-			indices[i] = this.indices[i];
+		System.arraycopy(this.indices, 0, indices, 0, this.indexCount);
 	}
 
 }
