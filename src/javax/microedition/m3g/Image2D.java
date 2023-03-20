@@ -30,6 +30,7 @@ public class Image2D extends Object3D
 
 
 	private byte[] image;
+	private byte[] palette;
 	private int width;
 	private int height;
 	private int format;
@@ -45,6 +46,20 @@ public class Image2D extends Object3D
 
 	public Image2D(int format, int w, int h, byte[] image)
 	{
+		/* As per JSR-184, throw NullPointerException if the received image is null. */
+		if (image == null) { throw new NullPointerException("Tried to construct Image2D with null image. "); }
+		
+		/* Also per JSR-184, throw IllegalArgumentException if format is not one of the constants. */
+		if (format != ALPHA && format != LUMINANCE && format != LUMINANCE_ALPHA && format != RGB && format != RGBA)
+			{ throw new IllegalArgumentException("Invalid image format received."); } 
+
+		/* Also per JSR-184, throw IllegalArgumentException if image is not a valid instance of our PlatformImage class. */
+		/*if (!(image instanceof PlatformImage)) 
+			{ throw new IllegalArgumentException("The image object received is not appropriate to this implementation."); }*/
+
+		/* Also per JSR-184, throw IllegalArgumentException if w or h <= 0*/
+		if (w <=0 || h <= 0) { throw new IllegalArgumentException("Image has invalid width and/or height."); }
+		
 		this.mutable = false;
 		this.width = w;
 		this.height = h;
@@ -52,27 +67,50 @@ public class Image2D extends Object3D
 		this.image = image;
 	}
 
-	public Image2D(int format, int w, int h, byte[] image, byte[] Palette)
+	public Image2D(int format, int w, int h, byte[] image, byte[] palette)
 	{
+		/* As per JSR-184, throw NullPointerException if the received image is null. */
+		if (image == null) { throw new NullPointerException("Tried to construct Image2D with null image. "); }
+		
+		/* Also per JSR-184, throw IllegalArgumentException if format is not one of the constants. */
+		if (format != ALPHA && format != LUMINANCE && format != LUMINANCE_ALPHA && format != RGB && format != RGBA)
+			{ throw new IllegalArgumentException("Invalid image format received."); } 
+
+		/* Also per JSR-184, throw IllegalArgumentException if image is not a valid instance of our PlatformImage class. */
+		/*if (!(image instanceof PlatformImage)) 
+			{ throw new IllegalArgumentException("The image object received is not appropriate to this implementation."); }*/
+
+		/* Also per JSR-184, throw IllegalArgumentException if w or h <= 0*/
+		if (w <=0 || h <= 0) { throw new IllegalArgumentException("Image has invalid width and/or height."); }
+
+		/* 
+		 * Also per JSR-184, throw IllegalArgumentException if (palette.length < 256*C) && ((palette.length % C) != 0), 
+		 * where C is the number of color components (for instance, 3 for RGB). 
+		 */
+		if(palette.length < 256 * this.bpp() && ((palette.length % this.bpp()) != 0))
+			{ throw new IllegalArgumentException("Illegal palette length received."); }
+
+
 		this.mutable = false;
 		this.width = w;
 		this.height = h;
 		this.format = format;
 		this.image = image;
+		this.palette = palette;
 	}
 
 	public Image2D(int format, Object image)
 	{
-		if (image == null)
-			throw new java.lang.NullPointerException();
-		if (format != ALPHA &&
-			format != LUMINANCE &&
-			format != LUMINANCE_ALPHA &&
-			format != RGB &&
-			format != RGBA)
-			throw new java.lang.IllegalArgumentException();
-		if (!(image instanceof PlatformImage))
-			throw new java.lang.IllegalArgumentException();
+		/* As per JSR-184, throw NullPointerException if the received image is null. */
+		if (image == null) { throw new NullPointerException("Tried to construct Image2D with null image. "); }
+		
+		/* Also per JSR-184, throw IllegalArgumentException if format is not one of the constants. */
+		if (format != ALPHA && format != LUMINANCE && format != LUMINANCE_ALPHA && format != RGB && format != RGBA)
+			{ throw new IllegalArgumentException("Invalid image format received."); } 
+
+		/* Also per JSR-184, throw IllegalArgumentException if image is not a valid instance of our PlatformImage class. */
+		/*if (!(image instanceof PlatformImage)) 
+			{ throw new IllegalArgumentException("The image object received is not appropriate to this implementation."); }*/
 
 		Raster img = ((PlatformImage) image).getCanvas().getData();
 		int bppSrc = img.getNumBands();
@@ -97,36 +135,30 @@ public class Image2D extends Object3D
 	}
 
 
-	public int getFormat()
-	{
-		return this.format;
-	}
+	public int getFormat() { return this.format; }
 
-	public int getHeight()
-	{
-		return this.height;
-	}
+	public int getHeight() { return this.height; }
 
-	public int getWidth()
-	{
-		return this.width;
-	}
+	public int getWidth() { return this.width; }
 
-	public boolean isMutable()
-	{
-		return this.mutable;
-	}
+	public boolean isMutable() { return this.mutable; }
 
 	public void set(int x, int y, int w, int h, byte[] image)
 	{
+		/* As per JSR-184, throw...
+		 * NullPointerException if the received image is null.
+		 * IllegalStateException if this Imagee2D object is immutable.
+		 * IllegalStateException if x < 0 or y < 0 or width <= 0 or height <= 0
+		 * IllegalStateException if image.length < (width * height * bpp)
+		 */
 		if (image == null)
-			throw new java.lang.NullPointerException();
+			throw new java.lang.NullPointerException("Received null image.");
 		if (!this.mutable)
-			throw new java.lang.IllegalStateException();
+			throw new java.lang.IllegalStateException("This Image2D object is not mutable.");
 		if (x < 0 || y < 0 || w <= 0 || h <= 0 ||
 			x + w > this.width || y + h > this.height ||
 			image.length < w * h * this.bpp())
-			throw new java.lang.IllegalArgumentException();
+			throw new java.lang.IllegalArgumentException("Tried to set image with invalid parameters.");
 
 		for (int i = 0; i < w; i++)
 			for (int j = 0; j < h; j++)
@@ -139,8 +171,13 @@ public class Image2D extends Object3D
 		y = ((y % this.height) + this.height) % this.height;
 		int offset = this.bpp() * (this.width * y + x);
 		int result = 0;
-		for (int ch = 0; ch < this.bpp(); ch++)
-			result |= this.image[offset + ch] << (8 * (this.bpp() - ch - 1));
+
+		/* Make sure the offset will never cause an out-of-bounds access to the image byte array. */
+		if(offset < this.image.length) 
+		{
+			for (int ch = 0; ch < this.bpp(); ch++) { result |= this.image[offset + ch] << (8 * (this.bpp() - ch - 1));}
+		}
+
 		return result;
 	}
 
@@ -150,8 +187,13 @@ public class Image2D extends Object3D
 		y = ((y % this.height) + this.height) % this.height;
 		int offset = this.bpp() * (this.width * y + x);
 		int[] result = new int[] { 0, 0, 0, 255 };
-		for (int ch = 0; ch < this.bpp(); ch++)
-			result[ch] = this.image[offset + ch];
+
+		/* Make sure the offset will never cause an out-of-bounds access to the image byte array. */
+		if(offset < this.image.length) 
+		{
+			for (int ch = 0; ch < this.bpp(); ch++) { result[ch] = this.image[offset + ch]; }
+		}
+		
 		return result;
 	}
 
