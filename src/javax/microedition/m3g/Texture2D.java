@@ -122,7 +122,7 @@ public class Texture2D extends Transformable
 	public void setImage(Image2D image)
 	{
 		if (image == null)
-			throw new java.lang.NullPointerException();
+			{ throw new java.lang.NullPointerException("Cannot set texture as null image."); }
 		if (image.getWidth() > Graphics3D.MAX_TEXTURE_DIMENSION ||
 			image.getHeight() > Graphics3D.MAX_TEXTURE_DIMENSION ||
 			!isPositivePowerOfTwo(image.getWidth()) ||

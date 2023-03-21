@@ -92,6 +92,7 @@ public class Graphics3D
 		this.currLightTrans = new ArrayList<Transform>();
 	}
 
+
 	public int addLight(Light light, Transform transform)
 	{
 		/* As per JSR-184, addLight() must throw a NullPointerException if no light is given */
@@ -335,7 +336,7 @@ public class Graphics3D
 	public void render(VertexBuffer vertices, IndexBuffer triangles, Appearance appearance, Transform transform) 
 	{ this.render(vertices, triangles, appearance, transform, -1); }
 
-	public void render( VertexBuffer vertices, IndexBuffer triangles, Appearance appearance, Transform transform, int scope) 
+	public void render(VertexBuffer vertices, IndexBuffer triangles, Appearance appearance, Transform transform, int scope) 
 	{
 		/* TODO: Check the scope used by the submesh to find out which lights need to be applied, if it needs to be rendered, etc. */
 
@@ -452,7 +453,7 @@ public class Graphics3D
 			WritableRaster ras = img.getRaster();
 
 			Color colorOrig = grp.getColor();
-			Color colorFill = new Color(0, 0, 0, 255); //new Color(0, 0, 224, 255);
+			Color colorFill = new Color(0, 150, 240, 255);
 			Color colorDraw = new Color(255, 255, 255, 128);
 
 			for (int tri_id = 0; tri_id < trisScreen.length; tri_id++)
@@ -473,8 +474,8 @@ public class Graphics3D
 					};
 					grp.setColor(colorFill);
 					grp.fillPolygon(coXr, coYr, 3);
-					grp.setColor(colorDraw);
-					grp.drawPolygon(coXr, coYr, 3);
+					//grp.setColor(colorDraw);
+					//grp.drawPolygon(coXr, coYr, 3);
 
 					continue;
 				}
@@ -628,6 +629,13 @@ public class Graphics3D
 		 * throw new IllegalStateException();
 		 */
 
+		Transform tr = new Transform();
+
+		Camera worldCamera = world.getActiveCamera();
+
+		if(worldCamera == null) { throw new IllegalStateException("Cannot render a world that has no active camera."); }
+
+		if(!worldCamera.getTransformTo(world, tr)) { throw new IllegalStateException("Active camera is not in world."); }
 		/* 
 		 * if the bg-img of `world` is not the same format as `this.target`:
 		 * throw new IllegalStateException();

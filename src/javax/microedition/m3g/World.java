@@ -18,7 +18,7 @@ package javax.microedition.m3g;
 
 public class World extends Group
 {
-	
+
 	private Background background;
 	private Camera camera;
 
@@ -28,6 +28,7 @@ public class World extends Group
 		this.camera = null;
 	}
 
+
 	public Camera getActiveCamera() { return this.camera; }
 
 	public Background getBackground() { return this.background; }
@@ -36,6 +37,7 @@ public class World extends Group
 	{
 		/* As per JSR-184, throw NullPointerException if received camera is null. */
 		if(cam == null) { throw new NullPointerException("World cannot set a null camera."); }
+		
 		this.camera = cam; 
 	}
 
@@ -43,6 +45,25 @@ public class World extends Group
 	{ 
 		/* If received bg is null, the world's background will also be null as per JSR-184. */
 		this.background = bg;
+	}
+
+	public int getNodeRefs(Object3D[] references)
+	{
+		int parentCount = super.getReferences(references);
+
+		if (this.camera != null)
+		{
+			if (references != null) { references[parentCount] = this.camera; }
+			parentCount += 1;
+		}
+
+		if (this.background != null)
+		{
+			if (references != null) { references[parentCount] = this.background; }
+			parentCount += 1;
+		}
+
+		return parentCount;
 	}
 
 }

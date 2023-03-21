@@ -41,6 +41,7 @@ public class Material extends Object3D
 		this.shininess = 0f;
 	}
 
+
 	public int getColor(int target) 
 	{ 
 		/* As per JSR-184, throw IllegalArgumentException if target has a value other than AMBIENT, DIFFUSSE, EMISSIVE or SPECULAR. */
@@ -72,20 +73,11 @@ public class Material extends Object3D
 		if((target & ~(AMBIENT | DIFFUSE | EMISSIVE | SPECULAR)) != 0) 
 			{throw new IllegalArgumentException("Trying to set material color on invalid material component."); }
 		
-		switch(target)
-		{
-			case AMBIENT:
-				this.ambientColor = ARGB;
-				break;
-			case DIFFUSE:
-				this.diffuseColor = ARGB;
-				break;
-			case EMISSIVE:
-				this.emissiveColor = ARGB;
-				break;
-			case SPECULAR:
-				this.specularColor = ARGB;
-		}
+
+		if ((target & AMBIENT)  != 0) { this.ambientColor = ARGB;  }
+		if ((target & DIFFUSE)  != 0) { this.diffuseColor = ARGB;  }
+		if ((target & EMISSIVE) != 0) { this.emissiveColor = ARGB; }
+		if ((target & SPECULAR) != 0) { this.specularColor = ARGB; }
 	}
 
 	public void setShininess(float shininess) 

@@ -26,7 +26,7 @@ public abstract class Transformable extends Object3D
 	public void getCompositeTransform(Transform transform)
 	{
 		if (transform == null)
-			throw new java.lang.NullPointerException();
+			throw new java.lang.NullPointerException("Cannot copy composite transform data into a null transform.");
 
 		transform.setIdentity();
 		transform.preMultiply(this.matrix);
@@ -38,7 +38,7 @@ public abstract class Transformable extends Object3D
 	public void getOrientation(float[] angleAxis)
 	{
 		if (angleAxis == null)
-			throw new java.lang.NullPointerException();
+			throw new java.lang.NullPointerException("Cannot copy orientation data into a null array.");
 		if (angleAxis.length < 4)
 			throw new java.lang.IllegalArgumentException();
 
@@ -70,7 +70,7 @@ public abstract class Transformable extends Object3D
 	public void getScale(float[] xyz)
 	{
 		if (xyz == null)
-			throw new java.lang.NullPointerException();
+			throw new java.lang.NullPointerException("Cannot copy scale data into a null array.");
 		if (xyz.length < 3)
 			throw new java.lang.IllegalArgumentException();
 
@@ -84,7 +84,7 @@ public abstract class Transformable extends Object3D
 	public void getTransform(Transform transform)
 	{
 		if (transform == null)
-			throw new java.lang.NullPointerException();
+			throw new java.lang.NullPointerException("Cannot copy transform data into a null transform.");
 
 		transform.set(this.matrix);
 	}
@@ -92,7 +92,7 @@ public abstract class Transformable extends Object3D
 	public void getTranslation(float[] xyz)
 	{
 		if (xyz == null)
-			throw new java.lang.NullPointerException();
+			throw new java.lang.NullPointerException("Cannot copy translation data into a null array.");
 		if (xyz.length < 3)
 			throw new java.lang.IllegalArgumentException();
 
@@ -139,11 +139,8 @@ public abstract class Transformable extends Object3D
 		{
 			float[] m = new float[16];
 			transform.get(m);
-			if (m[4*3+0] != 0 ||
-				m[4*3+1] != 0 ||
-				m[4*3+2] != 0 ||
-				m[4*3+3] != 1)
-				throw new java.lang.IllegalArgumentException();
+			if (m[4*3+0] != 0 || m[4*3+1] != 0 || m[4*3+2] != 0 || m[4*3+3] != 1)
+				{ throw new java.lang.IllegalArgumentException(); }
 		}
 
 		this.matrix = new Transform(transform);
