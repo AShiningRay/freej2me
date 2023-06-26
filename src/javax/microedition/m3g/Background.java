@@ -16,26 +16,45 @@
 */
 package javax.microedition.m3g;
 
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.nio.ByteOrder;
+
 public class Background extends Object3D
 {
 
 	public static final int BORDER = 32;
 	public static final int REPEAT = 33;
 
-	private int color;
-	private int modex;
-	private int modey;
+	private int color = 0x00000000;
+	private int modex = BORDER;
+	private int modey = BORDER;
 	private int cropw;
 	private int croph;
 	private int cropx;
 	private int cropy;
 
 	private Image2D image;
-	private boolean depthclear;
-	private boolean colorclear;
+	private boolean depthclear = true;
+	private boolean colorclear = true;
+	private Texture2D texture = null;
+
+	private FloatBuffer vertexBuffer;
+	private FloatBuffer textureBuffer;
+	// top right, top left, bottom right, bottom left coordinates
+	private float[] vertexArray = { 1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, -1.0f, 0.0f };
+	private float[] textureArray;
 
 
-	public Background() {  }
+	public Background() 
+	{  
+		vertexBuffer = ByteBuffer.allocateDirect(4 * 3 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+		vertexBuffer.put(vertexArray);
+		vertexBuffer.flip();
+		//	4 elements, 2 coordinates per element, float type
+		textureBuffer = ByteBuffer.allocateDirect(4 * 2 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+		textureArray = new float[4 * 2];
+	}
 
 
 	public int getColor() { return color; }
@@ -72,8 +91,32 @@ public class Background extends Object3D
 
 	public void setDepthClearEnable(boolean enable) { depthclear = enable; }
 
-	public void setImage(Image2D img) { image = img; }
+	public void setImage(Image2D img) 
+	{ 
+		if ((image != null) && (image.getFormat() != Image2D.RGB) && (image.getFormat() != Image2D.RGBA)) 
+		{
+			throw new IllegalArgumentException("Image format must be RGB or RGBA");
+		}
+		this.image = image;
 
-	public void setImageMode(int modeX, int modeY) { modex=modeX; modey=modeY; }
+		if (image != null) 
+		{
+			texture = new Texture2D(image);
+			texture.setFiltering(Texture2D.FILTER_LINEAR, Texture2D.FILTER_LINEAR);
+			texture.setWrapping(Texture2D.WRAP_CLAMP, Texture2D.WRAP_CLAMP);
+			texture.setBlending(Texture2D.FUNC_REPLACE);
+		} 
+		else { texture = null; }
+	}
+
+	public void setImageMode(int modeX, int modeY) 
+	{ 
+		if (((modeX != BORDER) && (modeX != REPEAT)) || ((modeY != BORDER) && (modeY != REPEAT))) 
+		{
+			throw new IllegalArgumentException("Invalid image mode for background");
+		}
+		modex=modeX; 
+		modey=modeY; 
+	}
 
 }

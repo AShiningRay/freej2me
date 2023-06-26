@@ -62,4 +62,38 @@ public class AnimationTrack extends Object3D
 
 	public void setController(AnimationController ac) { controller = ac; }
 
+	void getContribution(int time, float[] accumSamples, float[] weight, int[] validity) 
+	{
+		if (this.controller == null || !controller.isActive(time)) 
+		{
+			weight[0] = 0;
+			validity[0] = ((controller != null) ? controller.timeToActivation(time) : 0x7FFFFFFF);
+			if (validity[0] < 1) { validity[0] = 1; }
+			return;
+		}
+
+		int sampleLength = sequence.getComponentCount();
+		weight[0] = controller.getWeight();
+
+		if (weight[0] <= 0.0f) 
+		{
+			validity[0] = 0x7FFFFFFF;
+			return;
+		}
+
+		float[] sample = new float[sampleLength];
+
+		int sampleTime = (int) controller.getPosition(time);
+		int sampleValidity = sequence.getSample(sampleTime, sample);
+		validity[0] = sampleValidity;
+
+		if (sampleValidity > 0) 
+		{
+			sampleValidity = controller.timeToDeactivation(time);
+			if (sampleValidity < validity[0]) { validity[0] = sampleValidity; }
+
+			for (int i = 0; i < sampleLength; i++) { accumSamples[i] += sample[i] * weight[0]; }
+		}
+	}
+
 }

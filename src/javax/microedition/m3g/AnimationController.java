@@ -31,11 +31,31 @@ public class AnimationController extends Object3D
 	public AnimationController() {  }
 
 
+	public int timeToActivation(int worldTime) 
+	{
+		if (worldTime < intStart) { return intStart - worldTime; }
+		else if (worldTime < intEnd) { return 0; }
+
+		return 0x7FFFFFFF;
+	}
+
+	public int timeToDeactivation(int worldTime) 
+	{
+		if (worldTime < intEnd) { return intEnd - worldTime; }
+		return 0x7FFFFFFF;
+	}
+
+	public boolean isActive(int worldTime) 
+	{
+		if (intStart == intEnd) { return true; }
+		return (worldTime >= intStart && worldTime < intEnd);
+	}
+
 	public int getActiveIntervalEnd() { return intEnd; }
 
 	public int getActiveIntervalStart()  { return intStart; }
 
-	public float getPosition(int worldTime)  { return sequence; }
+	public float getPosition(int worldTime)  { return (this.sequence + (this.speed * (float) (worldTime - this.world))); }
 
 	public int getRefWorldTime()  { return world; }
 
@@ -45,22 +65,29 @@ public class AnimationController extends Object3D
 
 	public void setActiveInterval(int start, int end)
 	{
-		intStart = start;
-		intEnd = end;
+		if (start > end) { throw new IllegalArgumentException("Invalid Active interval (> than end interval)"); }
+
+		this.intStart = start;
+		this.intEnd = end;
 	}
 
 	public void setPosition(float sequenceTime, int worldTime)
 	{
-		sequence = sequenceTime;
-		world = worldTime;
+		this.sequence = sequenceTime;
+		this.world = worldTime;
 	}
 
 	public void setSpeed(float value, int worldTime)
 	{
-		speed = value;
-		world = worldTime;
+		this.sequence = getPosition(worldTime);
+		this.speed = value;
+		this.world = worldTime;
 	}
 
-	public void setWeight(float value)  { weight = value; }
+	public void setWeight(float value)  
+	{
+		if (weight < 0) { throw new IllegalArgumentException("Weight must be >= 0"); }
+		this.weight = value; 
+	}
 
 }

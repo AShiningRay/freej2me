@@ -16,34 +16,133 @@
 */
 package javax.microedition.m3g;
 
+import java.util.Vector;
+import java.lang.Object;
+
 public abstract class Object3D
 {
 
-	private int userid;
+	private int userID;
+	Object userObject;
+	Vector animTracks = new Vector();
 
 
-	public void addAnimationTrack(AnimationTrack animationTrack) {  }
+	public void addAnimationTrack(AnimationTrack animationTrack) 
+	{  
+		if (animationTrack == null) 
+		{
+			throw new NullPointerException("Object3D received null animationTrack");
+		}
+		if (/*(!isCompatible(animationTrack)) ||*/ animTracks.contains(animationTrack)) 
+		{
+			throw new IllegalArgumentException("AnimationTrack already exists");
+		}
+			
+		int newTrackTarget = animationTrack.getTargetProperty();
+		int components = animationTrack.getKeyframeSequence().getComponentCount();
+		int i;
+		for (i = 0; i < animTracks.size(); i++) {
+			AnimationTrack track = (AnimationTrack) animTracks.elementAt(i);
 
-	public int animate(int time) { return 0; }
+			if (track.getTargetProperty() > newTrackTarget)
+				break;
+
+			if (track.getTargetProperty() == newTrackTarget && (track.getKeyframeSequence().getComponentCount() != components)) {
+				throw new IllegalArgumentException();
+			}
+		}
+		
+		animTracks.add(i, animationTrack);
+	}
+
+	public int animate(int time) 
+	{ 
+		int validity = 0x7FFFFFFF;
+
+		if (animTracks == null) { return validity; }
+
+		int numTracks = animTracks.size();
+
+		for (int trackIndex = 0; trackIndex < numTracks; ) 
+		{
+			AnimationTrack track = (AnimationTrack) animTracks.elementAt(trackIndex);
+			KeyframeSequence sequence = track.getKeyframeSequence();
+
+			int components = sequence.getComponentCount();
+			int property = track.getTargetProperty();
+			int nextProperty;
+
+			int sumWeights = 0;
+			float[] sumValues = new float[components];
+
+			for (int i = 0; i < components; i++) sumValues[i] = 0;
+
+			do 
+			{
+				float[] weight = new float[1];
+				int[] Validity = new int[1];
+
+				track.getContribution(time, sumValues, weight, Validity);
+				if (Validity[0] <= 0) { return 0; }
+
+				sumWeights += weight[0];
+				validity = (validity <= Validity[0]) ? validity : Validity[0];
+
+				if (++trackIndex == numTracks) { break; }
+				track = (AnimationTrack) animTracks.elementAt(trackIndex);
+				nextProperty = track.getTargetProperty();
+			} while (nextProperty == property);
+
+			if (sumWeights > 0) { /* TODO: Update properties when sum of weights are positive */ }
+		}
+		return validity;
+	}
 
 	public Object3D duplicate() { return this; }
 
-	public Object3D find(int userID) { return this; }
+	public Object3D find(int userID) 
+	{ 
+		if (this.userID == userID) { return this; }
+		else if (animTracks != null) 
+		{
 
-	public AnimationTrack getAnimationTrack(int index) { return new AnimationTrack(new KeyframeSequence(0,0,0), 0); }
+			for (int i = 0; i < animTracks.size(); i++) {
+				AnimationTrack track = (AnimationTrack) animTracks.elementAt(i);
+				Object3D found = track.find(userID);
+				if (found != null)
+					return found;
+			}
+		}
+		return null;
+	}
+
+	public AnimationTrack getAnimationTrack(int index) { return (AnimationTrack) animTracks.elementAt(index); }
 
 	public int getAnimationTrackCount() { return 0; }
 
-	public int getReferences(Object3D[] references) { return 0; }
+	public int getReferences(Object3D[] references) 
+	{ 
+		if (!animTracks.isEmpty()) 
+		{
+			if (references != null) 
+			{
+				for (int i = 0; i < animTracks.size(); ++i) { references[i] = (Object3D) animTracks.elementAt(i); }
+			}
+			return animTracks.size();
+		}
+		else { return 0; }
+	}
 
-	public int getUserID() { return userid; }
+	void updateProperty(int property, float[] value) { }
 
-	public Object getUserObject() { return null; }
+	public int getUserID() { return this.userID; }
 
-	public void removeAnimationTrack(AnimationTrack animationTrack) {  }
+	public Object getUserObject() { return this.userObject; }
 
-	public void setUserID(int userID) { userid = userID; }
+	public void removeAnimationTrack(AnimationTrack animationTrack) { animTracks.removeElement(animationTrack);  }
 
-	public void setUserObject(java.lang.Object userObject) {  }
+	public void setUserID(int userID) { this.userID = userID; }
+
+	public void setUserObject(Object userObject) { this.userObject = userObject; }
 
 }

@@ -66,7 +66,7 @@ public class Appearance extends Object3D
 	public Texture2D getTexture(int index)
 	{
 		if (index < 0 || Graphics3D.NUM_TEXTURE_UNITS - 1 < index)
-			throw new java.lang.IndexOutOfBoundsException();
+			throw new java.lang.IndexOutOfBoundsException("Tried to get texture from invalid index");
 
 		return this.texture[index];
 	}
@@ -84,7 +84,7 @@ public class Appearance extends Object3D
 	public void setLayer(int layer)
 	{
 		if (layer < -63 || 63 < layer)
-			throw new java.lang.IndexOutOfBoundsException();
+			throw new java.lang.IndexOutOfBoundsException("Cannot set invalid layer");
 
 		this.layer = layer;
 	}
@@ -102,7 +102,7 @@ public class Appearance extends Object3D
 	public void setTexture(int index, Texture2D texture)
 	{
 		if (index < 0 || Graphics3D.NUM_TEXTURE_UNITS - 1 < index)
-			throw new java.lang.IndexOutOfBoundsException();
+			throw new java.lang.IndexOutOfBoundsException("Tried to set texture on an invalid index");
 
 		this.texture[index] = texture;
 	}

@@ -33,24 +33,24 @@ public class Texture2D extends Transformable
 	public static final int WRAP_REPEAT = 241;
 
 
-	private int blending = FUNC_ADD;
-	private int blendcolor = 0;
-	private int imageFilter = FILTER_LINEAR;
-	private int levelFilter = FILTER_BASE_LEVEL;
-	private int wraps = WRAP_CLAMP;
-	private int wrapt = WRAP_CLAMP;
+	private int blending;
+	private int blendcolor;
+	private int imageFilter;
+	private int levelFilter;
+	private int wraps;
+	private int wrapt;
 
 	private Image2D texImage;
 
 	public Texture2D(Image2D image)
 	{
-		this.setImage(image);
 		this.wraps = WRAP_REPEAT;
 		this.wrapt = WRAP_REPEAT;
 		this.levelFilter = FILTER_BASE_LEVEL;
 		this.imageFilter = FILTER_NEAREST;
 		this.blending = FUNC_MODULATE;
 		this.blendcolor = 0x00000000;
+		this.setImage(image);
 	}
 
 
@@ -101,7 +101,7 @@ public class Texture2D extends Transformable
 			func != FUNC_DECAL &&
 			func != FUNC_BLEND &&
 			func != FUNC_ADD)
-			throw new java.lang.IllegalArgumentException();
+			throw new java.lang.IllegalArgumentException("Invalid texture blending mode");
 
 		this.blending = func;
 	}
@@ -113,7 +113,7 @@ public class Texture2D extends Transformable
 			 levelFilter != FILTER_LINEAR) ||
 			(imageFilter != FILTER_NEAREST &&
 			 imageFilter != FILTER_LINEAR))
-			throw new java.lang.IllegalArgumentException();
+			throw new java.lang.IllegalArgumentException("Invalid texture filter mode");
 
 		this.levelFilter = levelFilter;
 		this.imageFilter = imageFilter;
@@ -127,7 +127,7 @@ public class Texture2D extends Transformable
 			image.getHeight() > Graphics3D.MAX_TEXTURE_DIMENSION ||
 			!isPositivePowerOfTwo(image.getWidth()) ||
 			!isPositivePowerOfTwo(image.getHeight()))
-			throw new java.lang.IllegalArgumentException();
+			throw new java.lang.IllegalArgumentException("Invalid texture size");
 
 		this.texImage = image;
 	}
@@ -136,7 +136,7 @@ public class Texture2D extends Transformable
 	{
 		if ((wrapS != WRAP_CLAMP && wrapS != WRAP_REPEAT) ||
 			(wrapT != WRAP_CLAMP && wrapT != WRAP_REPEAT))
-			throw new java.lang.IllegalArgumentException();
+			throw new java.lang.IllegalArgumentException("Invalid texture wrap mode");
 
 		this.wraps = wrapS;
 		this.wrapt = wrapT;

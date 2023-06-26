@@ -19,27 +19,72 @@ package javax.microedition.m3g;
 public class MorphingMesh extends Mesh
 {
 
-	private VertexBuffer morphtarget;
+	private VertexBuffer[] morphtargets;
 	private float[] weights;
 
 
-	public MorphingMesh(VertexBuffer base, VertexBuffer[] targets, IndexBuffer[] submeshes, Appearance[] appearances) {  }
+	public MorphingMesh(VertexBuffer base, VertexBuffer[] targets, IndexBuffer[] submeshes, Appearance[] appearances) 
+	{  
+		super(base, submeshes, appearances);
+		checkTargets(targets);
+		this.morphtargets = targets;
+	}
 
-	public MorphingMesh(VertexBuffer base, VertexBuffer[] targets, IndexBuffer submesh, Appearance appearance) {  }
+	public MorphingMesh(VertexBuffer base, VertexBuffer[] targets, IndexBuffer submesh, Appearance appearance) 
+	{  
+		super(base, submesh, appearance);
+		checkTargets(targets);
+		this.morphtargets = targets;
+	}
 
 
-	public VertexBuffer getMorphTarget(int index) { return morphtarget; }
+	public VertexBuffer getMorphTarget(int index) { return morphtargets[index]; }
 
-	public int getMorphTargetCount() { return 0; }
+	public int getMorphTargetCount() { return morphtargets.length; }
 
 	public void getWeights(float[] store)
 	{
-		for (int i=0; i<weights.length; i++)
+		if (weights == null) 
 		{
-			store[i]=weights[i];
+			throw new NullPointerException("Weights must not be null");
 		}
+		if (weights.length < getMorphTargetCount()) 
+		{
+			throw new IllegalArgumentException("Number of weights must be greater or equal to getMorphTargetCount()");
+		}
+		System.arraycopy(this.weights, 0, weights, 0, this.weights.length);
 	}
 
-	public void setWeights(float[] values) { weights = values; }
+	public void setWeights(float[] values) 
+	{ 
+		if (values == null) {
+			throw new NullPointerException("Weights must not be null");
+		}
+		this.weights = values; 
+	}
+
+	private void checkTargets(VertexBuffer[] targets) 
+	{
+
+		if (targets == null) 
+		{
+			throw new NullPointerException("MorphingMesh targets are null");
+		}
+		if (targets.length == 0) 
+		{
+			throw new IllegalArgumentException("Skeleton already has a parent");
+		}
+
+		boolean hasArrayNullElement = false;
+		for (int i = 0; i < targets.length; i++) 
+		{
+			if (targets[i] == null) { hasArrayNullElement = true; }
+		}
+		if (hasArrayNullElement) 
+		{
+			throw new IllegalArgumentException("Target array contains null elements");
+		}
+
+	}
 
 }

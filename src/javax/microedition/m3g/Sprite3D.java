@@ -16,12 +16,17 @@
 */
 package javax.microedition.m3g;
 
+import java.util.Hashtable;
+
 public class Sprite3D extends Node
 {
+
+	private static Hashtable textures = new Hashtable();
 
 	private Image2D image;
 	private Appearance appearance;
 	private boolean scaled;
+	private Texture2D texture;
 
 	private int cropw;
 	private int croph;
@@ -61,6 +66,20 @@ public class Sprite3D extends Node
 		croph=height;
 	}
 
-	public void setImage(Image2D img) { image = img; }
+	public void setImage(Image2D img) 
+	{ 
+		this.image = image;
+		texture = (Texture2D) textures.get(image);
+
+		if (texture == null) {
+			texture = new Texture2D(image);
+			texture.setFiltering(Texture2D.FILTER_LINEAR, Texture2D.FILTER_LINEAR);
+			texture.setWrapping(Texture2D.WRAP_CLAMP, Texture2D.WRAP_CLAMP);
+			texture.setBlending(Texture2D.FUNC_REPLACE);
+
+			// cache texture
+			textures.put(image, texture);
+		}
+	}
 
 }

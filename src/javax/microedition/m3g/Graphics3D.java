@@ -617,6 +617,9 @@ public class Graphics3D
 
 	public void render(World world)
 	{
+		/* Clear the background first */
+		clear(world.getBackground());
+
 		/* As per JSR-184, throw NullPointerException if the received world is null. */
 		if (world == null) { throw new NullPointerException("render(world) was called but no world was provided."); }
 		

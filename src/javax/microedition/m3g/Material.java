@@ -83,7 +83,10 @@ public class Material extends Object3D
 	public void setShininess(float shininess) 
 	{ 
 		/* As per JSR-184, throw IllegalArgumentException if shininess > 128(1f) or < 0(0f). */
-		if(shininess < 0f || shininess > 1f) { throw new IllegalArgumentException("Material received invalid shininess value."); }
+		//if(shininess < 0f || shininess > 1f) { throw new IllegalArgumentException("Material received invalid shininess value:" + shininess); }
+		
+		if(shininess < 0f) { shininess = 0f; }
+		else if (shininess > 1f) { shininess = 1f; }
 		
 		this.shininess = shininess; 
 	}
