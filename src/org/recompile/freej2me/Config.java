@@ -48,13 +48,19 @@ public class Config
 	private int menuid = 0;
 	private int itemid = 0;
 
-	private File file;
+	private File cFile;
 	private String configPath = "";
 	private String configFile = "";
+
+	private File sFile;
+	private final String systemPath = "freej2me_system/";
+	private final String systemFile = systemPath + "freej2me.conf";
+
 
 	public Runnable onChange;
 
 	HashMap<String, String> settings = new HashMap<String, String>(4);
+	HashMap<String, String> sysSettings = new HashMap<String, String>(4);
 
 	public Config()
 	{
@@ -65,7 +71,7 @@ public class Config
 		gc = lcd.getGraphics();
 
 		menu = new ArrayList<String[]>();
-		menu.add(new String[]{"Resume Game", "Display Size", "Sound", "Limit FPS", "Phone", "Rotate", "MIDI", "Exit"}); // 0 - Main Menu
+		menu.add(new String[]{"Resume Game", "Display Size", "Sound", "Limit FPS", "Phone", "Rotate", "MIDI", "2D HW Accel", "Exit"}); // 0 - Main Menu
 		menu.add(new String[]{"96x65","96x96","104x80","128x128","132x176","128x160","176x208","176x220", "208x208", "240x320", "320x240", "240x400", "352x416", "360x640", "640x360" ,"480x800", "800x480"}); // 1 - Size
 		menu.add(new String[]{"Quit", "Main Menu"}); // 2 - Restart Notice
 		menu.add(new String[]{"On", "Off"}); // 3 - sound
@@ -73,6 +79,7 @@ public class Config
 		menu.add(new String[]{"On", "Off"}); // 5 - rotate 
 		menu.add(new String[]{"Auto", "60 - Fast", "30 - Slow", "15 - Turtle"}); // 6 - FPS
 		menu.add(new String[]{"Default", "Custom"});  // 7 - MIDI soundfont
+		menu.add(new String[]{"Off", "On"});  // 8 - 2D Hardware Acceleration
 
 		onChange = new Runnable()
 		{
@@ -88,23 +95,27 @@ public class Config
 		String appname = Mobile.getPlatform().loader.suitename;
 		configPath = Mobile.getPlatform().dataPath + "./config/"+appname;
 		configFile = configPath + "/game.conf";
+
 		// Load Config //
 		try
 		{
 			Files.createDirectories(Paths.get(configPath));
+			Files.createDirectories(Paths.get(systemPath));
 		}
 		catch (Exception e)
 		{
-			System.out.println("Problem Creating Config Path "+configPath);
+			System.out.println("Problem Creating Config Path "+ configPath + " and System Path " + systemPath);
 			System.out.println(e.getMessage());
 		}
 
-		try // Check Config File
+		try /* Check Config File */
 		{
-			file = new File(configFile);
-			if(!file.exists())
+			cFile = new File(configFile);
+			sFile = new File(systemFile);
+
+			if(!cFile.exists())
 			{
-				file.createNewFile();
+				cFile.createNewFile();
 				settings.put("width", ""+width);
 				settings.put("height", ""+height);
 				settings.put("sound", "on");
@@ -112,7 +123,14 @@ public class Config
 				settings.put("rotate", "off");
 				settings.put("fps", "0");
 				settings.put("soundfont", "Default");
-				saveConfig();
+				saveConfigs();
+			}
+
+			if(!sFile.exists())
+			{
+				sFile.createNewFile();
+				sysSettings.put("2DHWAcceleration", "off");
+				saveConfigs();
 			}
 		}
 		catch (Exception e)
@@ -123,9 +141,10 @@ public class Config
 
 		try // Read Records
 		{
-			BufferedReader reader = new BufferedReader(new FileReader(file));
 			String line;
 			String[] parts;
+			/* Config file records */
+			BufferedReader reader = new BufferedReader(new FileReader(cFile));
 			while((line = reader.readLine())!=null)
 			{
 				parts = line.split(":");
@@ -153,6 +172,21 @@ public class Config
 			if(!settings.containsKey("fps")) { settings.put("fps", "0"); }
 			if(!settings.containsKey("soundfont")) { settings.put("soundfont", "Default"); }
 
+			/* System file records */
+			reader = new BufferedReader(new FileReader(sFile));
+			while((line = reader.readLine())!=null)
+			{
+				parts = line.split(":");
+				if(parts.length==2)
+				{
+					parts[0] = parts[0].trim();
+					parts[1] = parts[1].trim();
+					if(parts[0]!="" && parts[1]!="") { sysSettings.put(parts[0], parts[1]); }
+				}
+			}
+			if(!sysSettings.containsKey("2DHWAcceleration")) { settings.put("2DHWAcceleration", "off"); }
+
+			/* Update freej2me's canvas size with data read from config file */
 			int w = Integer.parseInt(settings.get("width"));
 			int h = Integer.parseInt(settings.get("height"));
 			if(width!=w || height!=h)
@@ -162,20 +196,22 @@ public class Config
 				lcd = new PlatformImage(width, height);
 				gc = lcd.getGraphics();
 			}
+			
 		}
 		catch (Exception e)
 		{
-			System.out.println("Problem Reading Config: "+configFile);
+			System.out.println("Problem Reading Config: " + configFile + "or " + systemFile);
 			System.out.println(e.getMessage());
 		}
 
 	}
 
-	public void saveConfig()
+	public void saveConfigs()
 	{
 		try
 		{
-			FileOutputStream fout = new FileOutputStream(file);
+			/* Save config file */
+			FileOutputStream fout = new FileOutputStream(cFile);
 
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(fout));
 
@@ -184,10 +220,20 @@ public class Config
 				writer.write(key+":"+settings.get(key)+"\n");
 			}
 			writer.close();
+
+			/* Save system file */
+			fout = new FileOutputStream(sFile);
+			writer = new BufferedWriter(new OutputStreamWriter(fout));
+
+			for (String key : sysSettings.keySet())
+			{
+				writer.write(key+":"+sysSettings.get(key)+"\n");
+			}
+			writer.close();
 		}
 		catch (Exception e)
 		{
-			System.out.println("Problem Opening Config "+configFile);
+			System.out.println("Problem Opening Config " + configFile + "or " + systemFile);
 			System.out.println(e.getMessage());
 		}
 	}
@@ -313,7 +359,7 @@ public class Config
 		for(int i=start; (i<(start+max))&(i<t.length); i++)
 		{
 			label = t[i];
-			if(menuid==0 && i>1 && i<7)
+			if(menuid==0 && i>1 && i<8)
 			{
 				switch(i)
 				{
@@ -322,6 +368,7 @@ public class Config
 					case 4: label = label+": "+settings.get("phone"); break;
 					case 5: label = label+": "+settings.get("rotate"); break;
 					case 6: label = label+": "+settings.get("soundfont"); break;
+					case 7: label = label+": "+sysSettings.get("2DHWAcceleration"); break;
 				}
 			}
 			if(i==itemid)
@@ -353,7 +400,8 @@ public class Config
 					case 4: menuid=4; itemid=0; break; // phone
 					case 5: menuid=5; itemid=0; break; // rotate
 					case 6: menuid=7; itemid=0; break; // MIDI soundfont
-					case 7: System.exit(0); break;
+					case 7: menuid=8; itemid=0; break; // 2D HW Acceleration
+					case 8: System.exit(0); break;
 				}
 			break;
 
@@ -407,6 +455,12 @@ public class Config
 				menuid=2; itemid=0;
 			break;
 
+			case 8: // Set 2D HW Acceleration to on or off.
+				if(itemid==0) { update2DHWAccel("off"); }
+				if(itemid==1) { update2DHWAccel("on"); }
+				menuid=2; itemid=0;
+			break;
+
 		}
 
 		render();
@@ -416,7 +470,7 @@ public class Config
 	{
 		settings.put("width", ""+w);
 		settings.put("height", ""+h);
-		saveConfig();
+		saveConfigs();
 		onChange.run();
 		width = w;
 		height = h;
@@ -429,7 +483,7 @@ public class Config
 	{
 		System.out.println("Config: sound "+value);
 		settings.put("sound", value);
-		saveConfig();
+		saveConfigs();
 		onChange.run();
 	}
 
@@ -437,7 +491,7 @@ public class Config
 	{
 		System.out.println("Config: phone "+value);
 		settings.put("phone", value);
-		saveConfig();
+		saveConfigs();
 		onChange.run();
 	}
 
@@ -445,7 +499,7 @@ public class Config
 	{
 		System.out.println("Config: rotate "+value);
 		settings.put("rotate", value);
-		saveConfig();
+		saveConfigs();
 		onChange.run();
 	}
 
@@ -453,7 +507,7 @@ public class Config
 	{
 		System.out.println("Config: fps "+value);
 		settings.put("fps", value);
-		saveConfig();
+		saveConfigs();
 		onChange.run();
 	}
 
@@ -461,7 +515,15 @@ public class Config
 	{
 		System.out.println("Config: soundfont "+value);
 		settings.put("soundfont", value);
-		saveConfig();
+		saveConfigs();
+		onChange.run();
+	}
+
+	private void update2DHWAccel(String value)
+	{
+		System.out.println("Config: 2D HW Acceleration "+value);
+		sysSettings.put("2DHWAcceleration", value);
+		saveConfigs();
 		onChange.run();
 	}
 }

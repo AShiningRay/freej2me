@@ -38,8 +38,6 @@ public class Libretro
 	private int lcdWidth;
 	private int lcdHeight;
 
-	private Runnable painter;
-
 	private BufferedImage surface;
 	private Graphics2D gc;
 
@@ -50,6 +48,7 @@ public class Libretro
 	private boolean rotateDisplay = false;
 	private boolean soundEnabled = true;
 	private int limitFPS = 0;
+	private static boolean HWAccelEnabled = false;
 
 	private boolean[] pressedKeys = new boolean[128];
 
@@ -70,6 +69,24 @@ public class Libretro
 
 	public static void main(String args[])
 	{
+		/* 
+		 * Like for FreeJ2ME's standalone jar, the sooner we set those, the better.
+		 * 2D Hardware acceleration requires OpenGL 1.2 / GLES 1.0, 
+		 * so it should be safe to enable in the vast majority of cases.
+		 */
+		if(Integer.parseInt(args[7]) == 1) 
+		{ 
+			System.setProperty("sun.java2d.opengl", "true");
+			System.setProperty("sun.java2d.opengles", "true");
+			HWAccelEnabled = true;
+		}
+		else 
+		{ 
+			System.setProperty("sun.java2d.opengl", "false");
+			System.setProperty("sun.java2d.opengles", "false");
+			HWAccelEnabled = false;
+		}
+
 		Libretro app = new Libretro(args);
 	}
 
@@ -136,19 +153,18 @@ public class Libretro
 
 		lio.start();
 
-		painter = new Runnable()
+		Mobile.getPlatform().setPainter(new Runnable()
 		{
 			public void run()
 			{
 				try
 				{
 					gc.drawImage(Mobile.getPlatform().getLCD(), 0, 0, lcdWidth, lcdHeight, null);
+					if(limitFPS>0) { Thread.sleep(limitFPS); }
 				}
 				catch (Exception e) { }
 			}
-		};
-		
-		Mobile.getPlatform().setPainter(painter);
+		});
 
 		System.out.println("+READY");
 		System.out.flush();
@@ -292,8 +308,10 @@ public class Libretro
 										if(!PlatformPlayer.customMidi) { config.settings.put("soundfont", "Default"); }
 										else                           { config.settings.put("soundfont", "Custom");  }
 										
+										if(HWAccelEnabled) { config.sysSettings.put("2DHWAcceleration", "on");  }
+										else               { config.sysSettings.put("2DHWAcceleration", "off"); }
 
-										config.saveConfig();
+										config.saveConfigs();
 										settingsChanged();
 
 										// Run jar
@@ -335,23 +353,30 @@ public class Libretro
 									config.settings.put("width",  ""+Integer.parseInt(cfgtokens[1]));
 									config.settings.put("height", ""+Integer.parseInt(cfgtokens[2]));
 
-									if(Integer.parseInt(cfgtokens[3])==1) { config.settings.put("rotate", "on");  }
-									if(Integer.parseInt(cfgtokens[3])==0) { config.settings.put("rotate", "off"); }
+									if(Integer.parseInt(cfgtokens[3])==1)      { config.settings.put("rotate", "on");  }
+									else if(Integer.parseInt(cfgtokens[3])==0) { config.settings.put("rotate", "off"); }
 
-									if(Integer.parseInt(cfgtokens[4])==0) { config.settings.put("phone", "Standard"); }
-									if(Integer.parseInt(cfgtokens[4])==1) { config.settings.put("phone", "Nokia");    }
-									if(Integer.parseInt(cfgtokens[4])==2) { config.settings.put("phone", "Siemens");  }
-									if(Integer.parseInt(cfgtokens[4])==3) { config.settings.put("phone", "Motorola"); }
+									if(Integer.parseInt(cfgtokens[4])==0)      { config.settings.put("phone", "Standard"); }
+									else if(Integer.parseInt(cfgtokens[4])==1) { config.settings.put("phone", "Nokia");    }
+									else if(Integer.parseInt(cfgtokens[4])==2) { config.settings.put("phone", "Siemens");  }
+									else if(Integer.parseInt(cfgtokens[4])==3) { config.settings.put("phone", "Motorola"); }
 
 									config.settings.put("fps", ""+cfgtokens[5]);
 
-									if(Integer.parseInt(cfgtokens[6])==1) { config.settings.put("sound", "on");  }
-									if(Integer.parseInt(cfgtokens[6])==0) { config.settings.put("sound", "off"); }
+									if(Integer.parseInt(cfgtokens[6])==1)      { config.settings.put("sound", "on");  }
+									else if(Integer.parseInt(cfgtokens[6])==0) { config.settings.put("sound", "off"); }
 
-									if(Integer.parseInt(cfgtokens[7])==0) { config.settings.put("soundfont", "Default"); }
-									if(Integer.parseInt(cfgtokens[7])==1) { config.settings.put("soundfont", "Custom");  }
+									if(Integer.parseInt(cfgtokens[7])==0)      { config.settings.put("soundfont", "Default"); }
+									else if(Integer.parseInt(cfgtokens[7])==1) { config.settings.put("soundfont", "Custom");  }
 
-									config.saveConfig();
+									/* 
+									 * Although hardware acceleration can be toggled at runtime, it still requires FreeJ2ME to be
+									 * restarted in order to fully apply.
+									 */
+									if(Integer.parseInt(cfgtokens[8]) == 1)      { config.sysSettings.put("2DHWAcceleration", "on");  HWAccelEnabled = true;  }
+									else if(Integer.parseInt(cfgtokens[8]) == 0) { config.sysSettings.put("2DHWAcceleration", "off"); HWAccelEnabled = false; }
+
+									config.saveConfigs();
 									settingsChanged();
 								break;
 								
@@ -360,18 +385,9 @@ public class Libretro
 									try
 									{
 										int[] data;
-										if(config.isRunning)
-										{
-											data = config.getLCD().getRGB(0, 0, lcdWidth, lcdHeight, null, 0, lcdWidth);
-										}
-										else
-										{
-											data = surface.getRGB(0, 0, lcdWidth, lcdHeight, null, 0, lcdWidth);
-											if(limitFPS>0)
-											{
-												Thread.sleep(limitFPS);
-											}
-										}
+	
+										data = surface.getRGB(0, 0, lcdWidth, lcdHeight, null, 0, lcdWidth);
+
 										int bufferLength = data.length*3;
 										int cb = 0;
 										for(int i=0; i<data.length; i++)
@@ -438,6 +454,20 @@ public class Libretro
 		String midiSoundfont = config.settings.get("soundfont");
 		if(midiSoundfont.equals("Custom"))  { PlatformPlayer.customMidi = true; }
 		if(midiSoundfont.equals("Default")) { PlatformPlayer.customMidi = false; }
+
+		String G2DHardwareAcceleration = config.sysSettings.get("2DHWAcceleration");
+		if(G2DHardwareAcceleration.equals("on")) 
+		{ 
+			System.setProperty("sun.java2d.opengl", "true");
+			System.setProperty("sun.java2d.opengles", "true");
+			HWAccelEnabled = true;
+		}
+		else
+		{
+			System.setProperty("sun.java2d.opengl", "false");
+			System.setProperty("sun.java2d.opengles", "false");
+			HWAccelEnabled = false;
+		}
 
 		if(lcdWidth != w || lcdHeight != h)
 		{

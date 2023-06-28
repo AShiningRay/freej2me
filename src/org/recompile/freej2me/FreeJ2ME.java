@@ -25,16 +25,62 @@ import org.recompile.mobile.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.FileReader;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
 public class FreeJ2ME
 {
+
 	public static void main(String args[])
 	{
+		/* 
+		 * Try reading the system settings file here to apply settings
+		 * such as Hardware Acceleration (and only that for now) that 
+		 * have to be set before any graphics object is defined. 
+		 * 
+		 * If the file isn't available, it will be created later.
+		 */
+		try 
+		{
+			File sFile = new File("freej2me_system/freej2me.conf");
+			String line;
+			String[] parts;
+			BufferedReader reader = new BufferedReader(new FileReader(sFile));
+			while((line = reader.readLine())!=null)
+			{
+				parts = line.split(":");
+				if(parts.length==2)
+				{
+					parts[0] = parts[0].trim();
+					parts[1] = parts[1].trim();
+					if(parts[0]!="" && parts[1]!="") 
+					{
+						if(parts[0].equals("2DHWAcceleration") && parts[1].equals("on")) 
+						{
+							System.setProperty("sun.java2d.opengl", "true");
+							System.setProperty("sun.java2d.opengles", "true");
+						}
+						else if(parts[0].equals("2DHWAcceleration") && parts[1].equals("off")) 
+						{
+							System.setProperty("sun.java2d.opengl", "false");
+							System.setProperty("sun.java2d.opengles", "false");
+						}
+					}
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			System.out.println("System config file doesn't exist yet.");
+			System.out.println(e.getMessage());
+		}
+		
+		
 		FreeJ2ME app = new FreeJ2ME(args);
 	}
 
@@ -350,6 +396,18 @@ public class FreeJ2ME
 		if(midiSoundfont.equals("Custom"))  { PlatformPlayer.customMidi = true; }
 		if(midiSoundfont.equals("Default")) { PlatformPlayer.customMidi = false; }
 
+		String G2DHardwareAcceleration = config.sysSettings.get("2DHWAcceleration");
+		if(G2DHardwareAcceleration.equals("on")) 
+		{ 
+			System.setProperty("sun.java2d.opengl", "true");
+			System.setProperty("sun.java2d.opengles", "true");
+		}
+		else
+		{
+			System.setProperty("sun.java2d.opengl", "false");
+			System.setProperty("sun.java2d.opengles", "false");
+		}
+
 		// Create a standard size LCD if not rotated, else invert window's width and height.
 		if(!rotateDisplay) 
 		{
@@ -510,23 +568,24 @@ public class FreeJ2ME
 			try
 			{
 				Graphics2D cgc = (Graphics2D)this.getGraphics();
+
 				if (config.isRunning)
 				{
 					if(!rotateDisplay)
 					{
-						g.drawImage(config.getLCD(), cx, cy, cw, ch, null);
+						cgc.drawImage(config.getLCD(), cx, cy, cw, ch, null);
 					}
 					else
 					{
 						// If rotated, simply redraw the config menu with different width and height
-						g.drawImage(config.getLCD(), cy, cx, cw, ch, null);
+						cgc.drawImage(config.getLCD(), cy, cx, cw, ch, null);
 					}
 				}
 				else
 				{
 					if(!rotateDisplay)
 					{
-						g.drawImage(Mobile.getPlatform().getLCD(), cx, cy, cw, ch, null);
+						cgc.drawImage(Mobile.getPlatform().getLCD(), cx, cy, cw, ch, null);
 					}
 					else
 					{

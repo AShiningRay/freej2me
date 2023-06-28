@@ -162,8 +162,8 @@ struct retro_core_option_v2_definition core_options[] =
     },
     {
         "freej2me_midifont",
-        "Virtual Phone Settings > MIDI Soundfont",
-        "MIDI Soundfont",
+        "Virtual Phone Settings > MIDI Soundfont (Core Restart required)",
+        "MIDI Soundfont (Core Restart required)",
         "Selects which kind of MIDI soundfont to use. 'Default' uses the soundfont bundled with the system or Java VM, while 'Custom' allows you to place a custom soundfont on '<freej2me-lr.jar folder>/freej2me_system/customMIDI' and use it on J2ME apps to simulate a specific phone or improve MIDI sound quality. WARNING: Big soundfonts greatly increase the emulator's RAM footprint and processing requirements, while smaller ones can actually help it perform better.",
         "Selects which kind of MIDI soundfont to use. 'Default' uses the soundfont bundled with the system or Java VM, while 'Custom' allows you to place a custom soundfont on '<freej2me-lr.jar folder>/freej2me_system/customMIDI' and use it on J2ME apps to simulate a specific phone or improve MIDI sound quality. WARNING: Big soundfonts greatly increase the emulator's RAM footprint and processing requirements, while smaller ones can actually help it perform better.",
         "vphone_settings",
@@ -173,6 +173,20 @@ struct retro_core_option_v2_definition core_options[] =
             { NULL, NULL },
         },
         "Default"
+    },
+    {
+        "freej2me_2dhwaccel",
+        "Virtual Phone Settings > 2D Hardware Acceleration (Core Restart required)",
+        "2D Hardware Acceleration (Core Restart required)",
+        "2D Hardware Acceleration can make FreeJ2ME benefit from your device's graphics adapter for 2D rendering instead of relying on the CPU. The API requirements are rather low at OpenGL 1.2 / GL ES 1.0, so it should be safe to enable in most cases. Bear in mindthat this option is experimental and might cause random graphical bugs, although unlikely.",
+        "2D Hardware Acceleration can make FreeJ2ME benefit from your device's graphics adapter for 2D rendering instead of relying on the CPU. The API requirements are rather low at OpenGL 1.2 / GL ES 1.0, so it should be safe to enable in most cases. Bear in mindthat this option is experimental and might cause random graphical bugs, although unlikely.",
+        "vphone_settings",
+        {
+            { "off", "off" },
+            { "on",  "on" },
+            { NULL, NULL },
+        },
+        "off"
     },
     {
         "freej2me_pointertype",
@@ -373,7 +387,7 @@ struct retro_core_option_definition core_options_v1 [] =
     },
     {
         "freej2me_midifont",
-        "MIDI Soundfont",
+        "MIDI Soundfont (Core Restart required)",
         "Selects which kind of MIDI soundfont to use. 'Default' uses the soundfont bundled with the system or Java VM, while 'Custom' allows you to place a custom soundfont on '<freej2me-lr.jar folder>/freej2me_system/customMIDI' and use it on J2ME apps to simulate a specific phone or improve MIDI sound quality. WARNING: Big soundfonts greatly increase the emulator's RAM footprint and processing requirements, while smaller ones can actually help it perform better.",
         {
             { "off", "Default" },
@@ -381,6 +395,17 @@ struct retro_core_option_definition core_options_v1 [] =
             { NULL, NULL },
         },
         "Default"
+    },
+    {
+        "freej2me_2dhwaccel",
+        "2D Hardware Acceleration (Core Restart required)",
+        "2D Hardware Acceleration can make FreeJ2ME benefit from your device's graphics adapter for 2D rendering instead of relying on the CPU. The API requirements are rather low at OpenGL 1.2 / GL ES 1.0, so it should be safe to enable in most cases. Bear in mindthat this option is experimental and might cause random graphical bugs, although unlikely.",
+        {
+            { "off", "off" },
+            { "on",  "on" },
+            { NULL, NULL },
+        },
+        "off"
     },
     {
         "freej2me_pointertype",
@@ -502,7 +527,11 @@ static const struct retro_variable vars[] =
     },
     { /* MIDI Soundfont */
         "freej2me_midifont",
-        "MIDI Soundfont; off|on"
+        "MIDI Soundfont (Core Restart required); off|on"
+    },
+    { /* MIDI Soundfont */
+        "freej2me_2dhwaccel",
+        "2D Hardware Acceleration (Core Restart required); off|on"
     },
     { /* Pointer Type */
         "freej2me_pointertype",
