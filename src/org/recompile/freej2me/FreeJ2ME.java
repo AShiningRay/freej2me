@@ -102,6 +102,7 @@ public class FreeJ2ME
 	private boolean useMotorolaControls = false;
 	private boolean rotateDisplay = false;
 	private int limitFPS = 0;
+	private int renderHint = 0;
 	
 	private boolean[] pressedKeys = new boolean[128];
 
@@ -396,9 +397,13 @@ public class FreeJ2ME
 		if(midiSoundfont.equals("Custom"))  { PlatformPlayer.customMidi = true; }
 		if(midiSoundfont.equals("Default")) { PlatformPlayer.customMidi = false; }
 
+		/* 
+		 * Although hardware acceleration can be toggled at runtime, it still requires FreeJ2ME to be
+		 * restarted in order to fully apply.
+		 */
 		String G2DHardwareAcceleration = config.sysSettings.get("2DHWAcceleration");
-		if(G2DHardwareAcceleration.equals("on")) 
-		{ 
+		if(G2DHardwareAcceleration != null && G2DHardwareAcceleration.equals("on")) 
+		{
 			System.setProperty("sun.java2d.opengl", "true");
 			System.setProperty("sun.java2d.opengles", "true");
 		}
@@ -407,6 +412,14 @@ public class FreeJ2ME
 			System.setProperty("sun.java2d.opengl", "false");
 			System.setProperty("sun.java2d.opengles", "false");
 		}
+
+		/* 
+		 * Rendering quality hint. AWT only since Libretro handles rendering hints, shaders and etc. 
+		 * by itself, not relying on java's underlying rendering. 
+		 */
+		String AWTrenderHint = config.sysSettings.get("2DRenderHint");
+		if(AWTrenderHint != null && AWTrenderHint.equals("Fast"))          { renderHint = 0; }
+		else if (AWTrenderHint != null && AWTrenderHint.equals("Quality")) { renderHint = 1; }
 
 		// Create a standard size LCD if not rotated, else invert window's width and height.
 		if(!rotateDisplay) 
@@ -568,6 +581,15 @@ public class FreeJ2ME
 			try
 			{
 				Graphics2D cgc = (Graphics2D)this.getGraphics();
+
+				if(renderHint == 0)
+				{
+					cgc.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
+				}
+				else if (renderHint == 1)
+				{
+					cgc.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+				}
 
 				if (config.isRunning)
 				{

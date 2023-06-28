@@ -71,7 +71,7 @@ public class Config
 		gc = lcd.getGraphics();
 
 		menu = new ArrayList<String[]>();
-		menu.add(new String[]{"Resume Game", "Display Size", "Sound", "Limit FPS", "Phone", "Rotate", "MIDI", "2D HW Accel", "Exit"}); // 0 - Main Menu
+		menu.add(new String[]{"Resume Game", "Display Size", "Sound", "Limit FPS", "Phone", "Rotate", "MIDI", "2D HW Accel", "2D Rendering", "Exit"}); // 0 - Main Menu
 		menu.add(new String[]{"96x65","96x96","104x80","128x128","132x176","128x160","176x208","176x220", "208x208", "240x320", "320x240", "240x400", "352x416", "360x640", "640x360" ,"480x800", "800x480"}); // 1 - Size
 		menu.add(new String[]{"Quit", "Main Menu"}); // 2 - Restart Notice
 		menu.add(new String[]{"On", "Off"}); // 3 - sound
@@ -80,6 +80,7 @@ public class Config
 		menu.add(new String[]{"Auto", "60 - Fast", "30 - Slow", "15 - Turtle"}); // 6 - FPS
 		menu.add(new String[]{"Default", "Custom"});  // 7 - MIDI soundfont
 		menu.add(new String[]{"Off", "On"});  // 8 - 2D Hardware Acceleration
+		menu.add(new String[]{"Fast", "Quality"}); // 9 - 2D Rendering hint
 
 		onChange = new Runnable()
 		{
@@ -130,6 +131,7 @@ public class Config
 			{
 				sFile.createNewFile();
 				sysSettings.put("2DHWAcceleration", "off");
+				sysSettings.put("2DRenderHint", "Fast");
 				saveConfigs();
 			}
 		}
@@ -185,6 +187,7 @@ public class Config
 				}
 			}
 			if(!sysSettings.containsKey("2DHWAcceleration")) { settings.put("2DHWAcceleration", "off"); }
+			if(!sysSettings.containsKey("2DRenderHint")) { settings.put("2DRenderHint", "Fast"); }
 
 			/* Update freej2me's canvas size with data read from config file */
 			int w = Integer.parseInt(settings.get("width"));
@@ -359,7 +362,7 @@ public class Config
 		for(int i=start; (i<(start+max))&(i<t.length); i++)
 		{
 			label = t[i];
-			if(menuid==0 && i>1 && i<8)
+			if(menuid==0 && i>1 && i<9)
 			{
 				switch(i)
 				{
@@ -369,6 +372,7 @@ public class Config
 					case 5: label = label+": "+settings.get("rotate"); break;
 					case 6: label = label+": "+settings.get("soundfont"); break;
 					case 7: label = label+": "+sysSettings.get("2DHWAcceleration"); break;
+					case 8: label = label+": "+sysSettings.get("2DRenderHint"); break;
 				}
 			}
 			if(i==itemid)
@@ -401,7 +405,8 @@ public class Config
 					case 5: menuid=5; itemid=0; break; // rotate
 					case 6: menuid=7; itemid=0; break; // MIDI soundfont
 					case 7: menuid=8; itemid=0; break; // 2D HW Acceleration
-					case 8: System.exit(0); break;
+					case 8: menuid=9; itemid=0; break; // 2D Rendering Hint (AWT only)
+					case 9: System.exit(0); break;
 				}
 			break;
 
@@ -459,6 +464,12 @@ public class Config
 				if(itemid==0) { update2DHWAccel("off"); }
 				if(itemid==1) { update2DHWAccel("on"); }
 				menuid=2; itemid=0;
+			break;
+
+			case 9: // Set 2D Rendering Hint
+				if(itemid==0) { update2DRenderHint("Fast"); }
+				if(itemid==1) { update2DRenderHint("Quality"); }
+				menuid=0; itemid=0;
 			break;
 
 		}
@@ -523,6 +534,14 @@ public class Config
 	{
 		System.out.println("Config: 2D HW Acceleration "+value);
 		sysSettings.put("2DHWAcceleration", value);
+		saveConfigs();
+		onChange.run();
+	}
+
+	private void update2DRenderHint(String value)
+	{
+		System.out.println("Config: 2D Rendering Hint "+value);
+		sysSettings.put("2DRenderHint", value);
 		saveConfigs();
 		onChange.run();
 	}
