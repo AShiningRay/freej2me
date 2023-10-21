@@ -16,7 +16,9 @@
 */
 package org.recompile.mobile;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.Vector;
@@ -68,17 +70,40 @@ public class PlatformPlayer implements Player
 			{
 				player = new midiPlayer(stream);
 			}
-			else
+			else if(type.equalsIgnoreCase("audio/x-wav") || type.equalsIgnoreCase("audio/wav"))
 			{
-				if(type.equalsIgnoreCase("audio/x-wav") || type.equalsIgnoreCase("audio/wav"))
+				player = new wavPlayer(stream);
+			}
+			else if (type.equalsIgnoreCase("")) /* If the stream doesn't have an accompanying type, try everything we can to try and load it */
+			{
+				try 
 				{
-					player = new wavPlayer(stream);
+					final byte[] tryStream = new byte[stream.available()];
+					readInputStreamData(stream, tryStream, 0, stream.available());
+
+					System.out.println("Received no explicit audio type. Trying to load as MIDI, and if it fails, WAV.");
+					/* Try loading it as a MIDI file first */
+					try { player = new midiPlayer(new ByteArrayInputStream(tryStream)); } 
+					catch (Exception e) { }
+					
+					/* If that doesn't work, try as WAV next, if it still doesn't work, we have no other players to try */
+					try { player = new wavPlayer(new ByteArrayInputStream(tryStream)); }
+					catch (Exception e)
+					{
+						System.out.println("No Player For: "+contentType);
+						player = new audioplayer();
+					}
 				}
-				else /* TODO: Implement a player for amr and mpeg audio types */
+				catch (IOException e)
 				{
-					System.out.println("No Player For: "+contentType);
-					player = new audioplayer();
+					System.out.println("Couldn't read input stream: " + e.getMessage());
 				}
+
+			}
+			else /* TODO: Implement a player for amr and mpeg audio types */
+			{
+				System.out.println("No Player For: "+contentType);
+				player = new audioplayer();
 			}
 		}
 		controls[0] = new volumeControl();
@@ -197,6 +222,18 @@ public class PlatformPlayer implements Player
 		return controls;
 	}
 
+	/* Read 'n' Bytes from the InputStream. Used by IMA ADPCM decoder as well. */
+	public static void readInputStreamData(InputStream input, byte[] output, int offset, int nBytes) throws IOException 
+	{
+		int end = offset + nBytes;
+		while(offset < end) 
+		{
+			int read = input.read(output, offset, end - offset);
+			if(read < 0) throw new java.io.EOFException();
+			offset += read;
+		}
+	}
+
 	// Players //
 
 	private class audioplayer
@@ -261,7 +298,7 @@ public class PlatformPlayer implements Player
 			}
 			catch (Exception e) 
 			{ 
-				System.out.println("Couldn't load midi file::" + e.getMessage());
+				System.out.println("Couldn't load midi file:" + e.getMessage());
 				if(customMidi) { synth.close(); }
 				midi.close();
 			}
