@@ -190,8 +190,8 @@ public class Config
 					if(parts[0]!="" && parts[1]!="") { sysSettings.put(parts[0], parts[1]); }
 				}
 			}
-			if(!sysSettings.containsKey("2DHWAcceleration")) { settings.put("2DHWAcceleration", "off"); }
-			if(!sysSettings.containsKey("2DRenderHint")) { settings.put("2DRenderHint", "Fast"); }
+			if(!sysSettings.containsKey("2DHWAcceleration")) { sysSettings.put("2DHWAcceleration", "off"); }
+			if(!sysSettings.containsKey("2DRenderHint")) { sysSettings.put("2DRenderHint", "Fast"); }
 
 			/* Update freej2me's canvas size with data read from config file */
 			int w = Integer.parseInt(settings.get("width"));
