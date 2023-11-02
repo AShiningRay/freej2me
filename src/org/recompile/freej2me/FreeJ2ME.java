@@ -32,6 +32,7 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
+import javax.microedition.media.Manager;
 
 public class FreeJ2ME
 {
@@ -444,6 +445,8 @@ public class FreeJ2ME
 			resize();
 			main.setSize(lcdWidth*scaleFactor+xborder , lcdHeight*scaleFactor+yborder);
 		}
+
+		Manager.updatePlayerNum((byte) Integer.parseInt(config.settings.get("maxmidiplayers")));
 	}
 
 	private int getMobileKey(int keycode)

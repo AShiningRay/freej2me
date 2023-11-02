@@ -31,6 +31,7 @@ import java.nio.file.Paths;
 import java.nio.file.Path;
 
 import javax.microedition.lcdui.Graphics;
+import javax.microedition.media.Manager;
 
 import org.recompile.mobile.Mobile;
 import org.recompile.mobile.PlatformImage;
@@ -71,7 +72,7 @@ public class Config
 		gc = lcd.getGraphics();
 
 		menu = new ArrayList<String[]>();
-		menu.add(new String[]{"Resume Game", "Display Size", "Sound", "Limit FPS", "Phone", "Rotate", "MIDI", "2D HW Accel", "2D Rendering", "Exit"}); // 0 - Main Menu
+		menu.add(new String[]{"Resume Game", "Display Size", "Sound", "Limit FPS", "Phone", "Rotate", "MIDI", "2D HW Accel", "2D Rendering", "Max MIDI Players", "Exit"}); // 0 - Main Menu
 		menu.add(new String[]{"96x65","96x96","104x80","128x128","132x176","128x160","176x208","176x220", "208x208", "240x320", "320x240", "240x400", "352x416", "360x640", "640x360" ,"480x800", "800x480"}); // 1 - Size
 		menu.add(new String[]{"Quit", "Main Menu"}); // 2 - Restart Notice
 		menu.add(new String[]{"On", "Off"}); // 3 - sound
@@ -81,6 +82,8 @@ public class Config
 		menu.add(new String[]{"Default", "Custom"});  // 7 - MIDI soundfont
 		menu.add(new String[]{"Off", "On"});  // 8 - 2D Hardware Acceleration
 		menu.add(new String[]{"Fast", "Quality"}); // 9 - 2D Rendering hint
+		menu.add(new String[]{"1", "2", "4", "8", "16", "32", "48", "64", "96"}); // 10 - Max amount of MIDI Players
+
 
 		onChange = new Runnable()
 		{
@@ -173,6 +176,7 @@ public class Config
 			if(!settings.containsKey("rotate")) { settings.put("rotate", "off"); }
 			if(!settings.containsKey("fps")) { settings.put("fps", "0"); }
 			if(!settings.containsKey("soundfont")) { settings.put("soundfont", "Default"); }
+			if(!settings.containsKey("maxmidiplayers")) { settings.put("maxmidiplayers", "32"); }
 
 			/* System file records */
 			reader = new BufferedReader(new FileReader(sFile));
@@ -362,7 +366,7 @@ public class Config
 		for(int i=start; (i<(start+max))&(i<t.length); i++)
 		{
 			label = t[i];
-			if(menuid==0 && i>1 && i<9)
+			if(menuid==0 && i>1 && i<10)
 			{
 				switch(i)
 				{
@@ -373,6 +377,7 @@ public class Config
 					case 6: label = label+": "+settings.get("soundfont"); break;
 					case 7: label = label+": "+sysSettings.get("2DHWAcceleration"); break;
 					case 8: label = label+": "+sysSettings.get("2DRenderHint"); break;
+					case 9: label = label+": "+settings.get("maxmidiplayers"); break;
 				}
 			}
 			if(i==itemid)
@@ -406,7 +411,8 @@ public class Config
 					case 6: menuid=7; itemid=0; break; // MIDI soundfont
 					case 7: menuid=8; itemid=0; break; // 2D HW Acceleration
 					case 8: menuid=9; itemid=0; break; // 2D Rendering Hint (AWT only)
-					case 9: System.exit(0); break;
+					case 9: menuid=10; itemid=0; break; // max MIDI Players
+					case 10: System.exit(0); break;
 				}
 			break;
 
@@ -470,6 +476,19 @@ public class Config
 				if(itemid==0) { update2DRenderHint("Fast"); }
 				if(itemid==1) { update2DRenderHint("Quality"); }
 				menuid=0; itemid=0;
+			break;
+
+			case 10: // Max Midi Players
+				if(itemid==0)  { updateMIDIPlayers("1"); }
+				if(itemid==1)  { updateMIDIPlayers("2"); }
+				if(itemid==2)  { updateMIDIPlayers("4"); }
+				if(itemid==3)  { updateMIDIPlayers("8"); }
+				if(itemid==4)  { updateMIDIPlayers("16"); }
+				if(itemid==5)  { updateMIDIPlayers("32"); }
+				if(itemid==6)  { updateMIDIPlayers("48"); }
+				if(itemid==7)  { updateMIDIPlayers("64"); }
+				if(itemid==8)  { updateMIDIPlayers("96"); }
+				menuid=2; itemid=0;
 			break;
 
 		}
@@ -542,6 +561,14 @@ public class Config
 	{
 		System.out.println("Config: 2D Rendering Hint "+value);
 		sysSettings.put("2DRenderHint", value);
+		saveConfigs();
+		onChange.run();
+	}
+
+	private void updateMIDIPlayers(String value) 
+	{
+		System.out.println("Config: maxmidiplayers "+value);
+		settings.put("maxmidiplayers", value);
 		saveConfigs();
 		onChange.run();
 	}
