@@ -78,6 +78,7 @@ public class Libretro
 		{ 
 			System.setProperty("sun.java2d.opengl", "true");
 			System.setProperty("sun.java2d.opengles", "true");
+			System.setProperty("sun.java2d.accthreshold", "0");
 			HWAccelEnabled = true;
 		}
 		else 
@@ -460,6 +461,7 @@ public class Libretro
 		{ 
 			System.setProperty("sun.java2d.opengl", "true");
 			System.setProperty("sun.java2d.opengles", "true");
+			System.setProperty("sun.java2d.accthreshold", "0");
 			HWAccelEnabled = true;
 		}
 		else

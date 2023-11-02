@@ -64,6 +64,7 @@ public class FreeJ2ME
 						{
 							System.setProperty("sun.java2d.opengl", "true");
 							System.setProperty("sun.java2d.opengles", "true");
+							System.setProperty("sun.java2d.accthreshold", "0");
 						}
 						else if(parts[0].equals("2DHWAcceleration") && parts[1].equals("off")) 
 						{
@@ -406,6 +407,7 @@ public class FreeJ2ME
 		{
 			System.setProperty("sun.java2d.opengl", "true");
 			System.setProperty("sun.java2d.opengles", "true");
+			System.setProperty("sun.java2d.accthreshold", "0");
 		}
 		else
 		{
