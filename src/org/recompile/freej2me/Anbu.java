@@ -18,11 +18,6 @@ package org.recompile.freej2me;
 
 import org.recompile.mobile.*;
 
-import java.awt.Image;
-import java.awt.Canvas;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-
 import java.io.File;
 import java.util.Arrays;
 import java.util.Timer;
@@ -172,6 +167,7 @@ public class Anbu
 		{
 			proc.destroy();
 			keytimer.cancel();
+			System.exit(0);
 		}
 
 		private class SDLKeyTimerTask extends TimerTask
@@ -179,7 +175,6 @@ public class Anbu
 			private int bin;
 			private byte[] din = new byte[6];
 			private int count = 0;
-			private int code;
 			private int mobikey;
 			int mousex = 0, mousey = 0;
 
@@ -192,7 +187,7 @@ public class Anbu
 						if(!proc.isAlive()) 
 						{
 							System.out.println("SDL interface was closed. Cleaning up...");
-							System.exit(0);
+							stop();
 						}
 
 						bin = keys.read();
@@ -203,42 +198,21 @@ public class Anbu
 						if (count==5)
 						{
 							count = 0;
-							code = (din[1]<<24) | (din[2]<<16) | (din[3]<<8) | din[4];
-							//~ System.out.println(" ("+code+") <- Key");
-							System.out.println(din[0] + "|" + din[1] + "|" + din[2] + "|" + din[3] + "|" + din[4] + "|");
+							//System.out.println(din[0] + "|" + din[1] + "|" + din[2] + "|" + din[3] + "|" + din[4] + "|");
 							switch(din[0])
 							{
 								case 0: // keyboard key up
-									mobikey = getMobileKey(din[1]); 
-									if (mobikey != 0)
-									{
-										keyUp(mobikey);
-									}
-									break;
-
-								case 1:  // keyboard key down
-									mobikey = getMobileKey(din[1]); 
-									if (mobikey != 0)
-									{
-										keyDown(mobikey);
-									}
-									break;
-
 								case 16: // joypad key up
-									mobikey = getMobileKey(din[1]);
-									if (mobikey != 0)
-									{
-										keyUp(mobikey);
-									}
+									mobikey = getMobileKey(din[1]); 
+									if (mobikey != 0) { keyUp(mobikey); }
 								break;
 
+								case 1:  // keyboard key down
 								case 17: // joypad key down
 									mobikey = getMobileKey(din[1]);
 									//System.out.println("JoyKey:" + din[1]);
-									if (mobikey != 0)
-									{
-										keyDown(mobikey);
-									}
+									if (mobikey != 0) { keyDown(mobikey); }
+								break;
 
 								case 4: // mouse up
 									mousex = ((din[1] & 0xFF) << 8) | (din[2] & 0xFF);
@@ -337,7 +311,7 @@ public class Anbu
 			// These keys are overridden by the "useXControls" variables
 			if(useNokiaControls) 
 			{
-				if(keycode == 0x00) { return Mobile.KEY_NUM5; } // A
+				if(keycode == 0x00) { return Mobile.NOKIA_SOFT3; } // A
 				if(keycode == 0x04) { return Mobile.NOKIA_SOFT1; } // -/Select
 				if(keycode == 0x06) { return Mobile.NOKIA_SOFT2; } // +/Start
 				if(keycode == 0x0B) { return Mobile.NOKIA_UP; }    // D-Pad Up
@@ -367,6 +341,7 @@ public class Anbu
 			}
 			else // Standard keycodes
 			{
+				if(keycode == 0x00) { return Mobile.KEY_NUM5; }
 				if(keycode == 0x04) { return Mobile.NOKIA_SOFT1; }
 				if(keycode == 0x06) { return Mobile.NOKIA_SOFT2; }
 				if(keycode == 0x0B) { return Mobile.KEY_NUM2; }
@@ -377,7 +352,8 @@ public class Anbu
 			
 			//if(keycode == 0x0F) return Mobile.GAME_C; // Screenshot, shouldn't really be used here
 
-			if(keycode == 0x1B) config.start(); // ESC, special key to bring up the config menu
+			if(keycode == 0x1B) { config.start(); } // ESC, special key to bring up the config menu
+
 			return 0;
 		}
 
@@ -403,8 +379,13 @@ public class Anbu
 		if(phone.equals("Siemens")) { Mobile.siemens = true; useSiemensControls = true; }
 		if(phone.equals("Motorola")) { Mobile.motorola = true; useMotorolaControls = true; }
 
+		// We should send this one over to the sdl interface.
 		String rotate = config.settings.get("rotate");
 		if(rotate.equals("on")) { rotateDisplay = true; }
 		if(rotate.equals("off")) { rotateDisplay = false; }
+
+		// Screen width and height won't be updated here, it breaks sdl_interface's frame streaming
+		// as it will be expecting a given size for the frame, and we don't pass the updated size
+		// to it (yet)
 	}
 }
