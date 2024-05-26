@@ -72,17 +72,18 @@ public class Config
 		gc = lcd.getGraphics();
 
 		menu = new ArrayList<String[]>();
-		menu.add(new String[]{"Resume Game", "Display Size", "Sound", "Limit FPS", "Phone", "Rotate", "MIDI", "2D HW Accel", "2D Rendering", "Max MIDI Players", "Exit"}); // 0 - Main Menu
+		menu.add(new String[]{"Resume Game", "Display Size", "Sound", "Limit FPS", "Phone", "Rotate", "D-Pad as Full Keypad", "MIDI", "2D HW Accel", "2D Rendering", "Max MIDI Players", "Exit"}); // 0 - Main Menu
 		menu.add(new String[]{"96x65","96x96","104x80","128x128","132x176","128x160","176x208","176x220", "208x208", "240x320", "320x240", "240x400", "352x416", "360x640", "640x360" ,"480x800", "800x480"}); // 1 - Size
 		menu.add(new String[]{"Quit", "Main Menu"}); // 2 - Restart Notice
 		menu.add(new String[]{"On", "Off"}); // 3 - sound
 		menu.add(new String[]{"Standard", "Nokia", "Siemens","Motorola"}); // 4 - Phone 
 		menu.add(new String[]{"On", "Off"}); // 5 - rotate 
 		menu.add(new String[]{"Auto", "60 - Fast", "30 - Slow", "15 - Turtle"}); // 6 - FPS
-		menu.add(new String[]{"Default", "Custom"});  // 7 - MIDI soundfont
-		menu.add(new String[]{"Off", "On"});  // 8 - 2D Hardware Acceleration
-		menu.add(new String[]{"Fast", "Quality"}); // 9 - 2D Rendering hint
-		menu.add(new String[]{"1", "2", "4", "8", "16", "32", "48", "64", "96"}); // 10 - Max amount of MIDI Players
+		menu.add(new String[]{"Auto", "60 - Fast", "30 - Slow", "15 - Turtle"}); // 7 - Map D-PAD as Full Keypad
+		menu.add(new String[]{"Default", "Custom"});  // 8 - MIDI soundfont
+		menu.add(new String[]{"Off", "On"});  // 9 - 2D Hardware Acceleration
+		menu.add(new String[]{"Fast", "Quality"}); // 10 - 2D Rendering hint
+		menu.add(new String[]{"1", "2", "4", "8", "16", "32", "48", "64", "96"}); // 11 - Max amount of MIDI Players
 
 
 		onChange = new Runnable()
@@ -126,6 +127,7 @@ public class Config
 				settings.put("phone", "Standard");
 				settings.put("rotate", "off");
 				settings.put("fps", "0");
+				settings.put("maptofullkeypad", "off");
 				settings.put("soundfont", "Default");
 				saveConfigs();
 			}
@@ -175,6 +177,7 @@ public class Config
 			if(!settings.containsKey("phone")) { settings.put("phone", "Standard"); }
 			if(!settings.containsKey("rotate")) { settings.put("rotate", "off"); }
 			if(!settings.containsKey("fps")) { settings.put("fps", "0"); }
+			if(!settings.containsKey("maptofullkeypad")) { settings.put("maptofullkeypad", "off"); }
 			if(!settings.containsKey("soundfont")) { settings.put("soundfont", "Default"); }
 			if(!settings.containsKey("maxmidiplayers")) { settings.put("maxmidiplayers", "32"); }
 
@@ -375,10 +378,11 @@ public class Config
 					case 3: label = label+": "+settings.get("fps"); break;
 					case 4: label = label+": "+settings.get("phone"); break;
 					case 5: label = label+": "+settings.get("rotate"); break;
-					case 6: label = label+": "+settings.get("soundfont"); break;
-					case 7: label = label+": "+sysSettings.get("2DHWAcceleration"); break;
-					case 8: label = label+": "+sysSettings.get("2DRenderHint"); break;
-					case 9: label = label+": "+settings.get("maxmidiplayers"); break;
+					case 6: label = label+": "+settings.get("maptofullkeypad"); break;
+					case 7: label = label+": "+settings.get("soundfont"); break;
+					case 8: label = label+": "+sysSettings.get("2DHWAcceleration"); break;
+					case 9: label = label+": "+sysSettings.get("2DRenderHint"); break;
+					case 10: label = label+": "+settings.get("maxmidiplayers"); break;
 				}
 			}
 			if(i==itemid)
@@ -409,11 +413,12 @@ public class Config
 					case 3: menuid=6; itemid=0; break; // fps
 					case 4: menuid=4; itemid=0; break; // phone
 					case 5: menuid=5; itemid=0; break; // rotate
-					case 6: menuid=7; itemid=0; break; // MIDI soundfont
-					case 7: menuid=8; itemid=0; break; // 2D HW Acceleration
-					case 8: menuid=9; itemid=0; break; // 2D Rendering Hint (AWT only)
-					case 9: menuid=10; itemid=0; break; // max MIDI Players
-					case 10: System.exit(0); break;
+					case 7: menuid=7; itemid=0; break; // Map to Full Keypad
+					case 8: menuid=8; itemid=0; break; // MIDI soundfont
+					case 9: menuid=9; itemid=0; break; // 2D HW Acceleration
+					case 10: menuid=10; itemid=0; break; // 2D Rendering Hint (AWT only)
+					case 11: menuid=11; itemid=0; break; // max MIDI Players
+					case 12: System.exit(0); break;
 				}
 			break;
 
@@ -461,25 +466,31 @@ public class Config
 				menuid=0; itemid=0;
 			break;
 
-			case 7: // Set MIDI Soundfont to System default or custom file
+			case 7: // Map Directionals to Full Keypad
+				if(itemid==0) { updateMapKeypad("off"); }
+				if(itemid==1) { updateMapKeypad("on"); }
+				menuid=0; itemid=0;
+			break;
+
+			case 8: // Set MIDI Soundfont to System default or custom file
 				if(itemid==0) { updateSoundfont("Default"); }
 				if(itemid==1) { updateSoundfont("Custom"); }
 				menuid=2; itemid=0;
 			break;
 
-			case 8: // Set 2D HW Acceleration to on or off.
+			case 9: // Set 2D HW Acceleration to on or off.
 				if(itemid==0) { update2DHWAccel("off"); }
 				if(itemid==1) { update2DHWAccel("on"); }
 				menuid=2; itemid=0;
 			break;
 
-			case 9: // Set 2D Rendering Hint
+			case 10: // Set 2D Rendering Hint
 				if(itemid==0) { update2DRenderHint("Fast"); }
 				if(itemid==1) { update2DRenderHint("Quality"); }
 				menuid=0; itemid=0;
 			break;
 
-			case 10: // Max Midi Players
+			case 11: // Max Midi Players
 				if(itemid==0)  { updateMIDIPlayers("1"); }
 				if(itemid==1)  { updateMIDIPlayers("2"); }
 				if(itemid==2)  { updateMIDIPlayers("4"); }
@@ -538,6 +549,14 @@ public class Config
 	{
 		System.out.println("Config: fps "+value);
 		settings.put("fps", value);
+		saveConfigs();
+		onChange.run();
+	}
+
+	public void updateMapKeypad(String value)
+	{
+		System.out.println("Config: maptofullkeypad "+value);
+		settings.put("maptofullkeypad", value);
 		saveConfigs();
 		onChange.run();
 	}

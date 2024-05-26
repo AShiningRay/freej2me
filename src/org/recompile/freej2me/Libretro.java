@@ -24,6 +24,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -50,6 +52,7 @@ public class Libretro
 	private boolean rotateDisplay = false;
 	private boolean soundEnabled = true;
 	private int limitFPS = 0;
+	private boolean directionalsAsEntireKeypad = false;
 	private int maxmidiplayers = 32;
 	private static boolean HWAccelEnabled = false;
 
@@ -60,6 +63,8 @@ public class Libretro
 
 	private int mousex;
 	private int mousey;
+
+	private Set<Integer> incomingPressedKeys = new HashSet<>();
 
 	/* 
 	 * StringBuilder used to get the updated configs from the libretro core
@@ -77,7 +82,7 @@ public class Libretro
 		 * 2D Hardware acceleration requires OpenGL 1.2 / GLES 1.0, 
 		 * so it should be safe to enable in the vast majority of cases.
 		 */
-		if(Integer.parseInt(args[7]) == 1) 
+		if(Integer.parseInt(args[8]) == 1) 
 		{ 
 			System.setProperty("sun.java2d.opengl", "true");
 			System.setProperty("sun.java2d.opengles", "true");
@@ -141,9 +146,11 @@ public class Libretro
 
 		if(Integer.parseInt(args[5]) == 0) { soundEnabled = false; }
 
-		if(Integer.parseInt(args[6]) == 1) { PlatformPlayer.customMidi = true; }
+		if(Integer.parseInt(args[6]) == 1) { directionalsAsEntireKeypad = true; }
+
+		if(Integer.parseInt(args[7]) == 1) { PlatformPlayer.customMidi = true; }
 		
-		maxmidiplayers = Integer.parseInt(args[7]);
+		maxmidiplayers = Integer.parseInt(args[9]);
 		Manager.updatePlayerNum((byte) maxmidiplayers);
 
 		/* Once it finishes parsing all arguments, it's time to set up freej2me-lr */
@@ -228,7 +235,7 @@ public class Libretro
 								break;
 
 								case 2:	// joypad key up
-									mobikey = getMobileKeyJoy(code);
+									mobikey = getMobileKeyJoy(code, false);
 									if (mobikey != 0)
 									{
 										keyUp(mobikey);
@@ -236,7 +243,7 @@ public class Libretro
 								break;
 
 								case 3: // joypad key down
-									mobikey = getMobileKeyJoy(code);
+									mobikey = getMobileKeyJoy(code, true);
 									if (mobikey != 0)
 									{
 										keyDown(mobikey);
@@ -312,6 +319,9 @@ public class Libretro
 
 										config.settings.put("fps", ""+limitFPS);
 
+										if(directionalsAsEntireKeypad)   { config.settings.put("maptofullkeypad", "on");  }
+										if(!directionalsAsEntireKeypad)  { config.settings.put("maptofullkeypad", "off"); }
+
 										config.settings.put("maxmidiplayers", ""+maxmidiplayers);
 
 										if(!PlatformPlayer.customMidi) { config.settings.put("soundfont", "Default"); }
@@ -375,25 +385,28 @@ public class Libretro
 									if(Integer.parseInt(cfgtokens[6])==1)      { config.settings.put("sound", "on");  }
 									else if(Integer.parseInt(cfgtokens[6])==0) { config.settings.put("sound", "off"); }
 
-									if(Integer.parseInt(cfgtokens[7])==0)      { config.settings.put("soundfont", "Default"); }
-									else if(Integer.parseInt(cfgtokens[7])==1) { config.settings.put("soundfont", "Custom");  }
+									if(Integer.parseInt(cfgtokens[7])==0)      { config.settings.put("maptofullkeypad", "off"); }
+									else if(Integer.parseInt(cfgtokens[7])==1) { config.settings.put("maptofullkeypad", "on");  }
+
+									if(Integer.parseInt(cfgtokens[8])==0)      { config.settings.put("soundfont", "Default"); }
+									else if(Integer.parseInt(cfgtokens[8])==1) { config.settings.put("soundfont", "Custom");  }
 
 									/* 
 									 * Although hardware acceleration can be toggled at runtime, it still requires FreeJ2ME to be
 									 * restarted in order to fully apply.
 									 */
-									if(Integer.parseInt(cfgtokens[8]) == 1)      { config.sysSettings.put("2DHWAcceleration", "on");  HWAccelEnabled = true;  }
-									else if(Integer.parseInt(cfgtokens[8]) == 0) { config.sysSettings.put("2DHWAcceleration", "off"); HWAccelEnabled = false; }
+									if(Integer.parseInt(cfgtokens[9]) == 1)      { config.sysSettings.put("2DHWAcceleration", "on");  HWAccelEnabled = true;  }
+									else if(Integer.parseInt(cfgtokens[9]) == 0) { config.sysSettings.put("2DHWAcceleration", "off"); HWAccelEnabled = false; }
 
-									if(Integer.parseInt(cfgtokens[9])==0) { config.settings.put("maxmidiplayers", "1");}
-									if(Integer.parseInt(cfgtokens[9])==1) { config.settings.put("maxmidiplayers", "2");}
-									if(Integer.parseInt(cfgtokens[9])==2) { config.settings.put("maxmidiplayers", "4");}
-									if(Integer.parseInt(cfgtokens[9])==3) { config.settings.put("maxmidiplayers", "8");}
-									if(Integer.parseInt(cfgtokens[9])==4) { config.settings.put("maxmidiplayers", "16");}
-									if(Integer.parseInt(cfgtokens[9])==5) { config.settings.put("maxmidiplayers", "32");}
-									if(Integer.parseInt(cfgtokens[9])==6) { config.settings.put("maxmidiplayers", "48");}
-									if(Integer.parseInt(cfgtokens[9])==7) { config.settings.put("maxmidiplayers", "64");}
-									if(Integer.parseInt(cfgtokens[9])==8) { config.settings.put("maxmidiplayers", "96");}
+									if(Integer.parseInt(cfgtokens[10])==0) { config.settings.put("maxmidiplayers", "1");}
+									if(Integer.parseInt(cfgtokens[10])==1) { config.settings.put("maxmidiplayers", "2");}
+									if(Integer.parseInt(cfgtokens[10])==2) { config.settings.put("maxmidiplayers", "4");}
+									if(Integer.parseInt(cfgtokens[10])==3) { config.settings.put("maxmidiplayers", "8");}
+									if(Integer.parseInt(cfgtokens[10])==4) { config.settings.put("maxmidiplayers", "16");}
+									if(Integer.parseInt(cfgtokens[10])==5) { config.settings.put("maxmidiplayers", "32");}
+									if(Integer.parseInt(cfgtokens[10])==6) { config.settings.put("maxmidiplayers", "48");}
+									if(Integer.parseInt(cfgtokens[10])==7) { config.settings.put("maxmidiplayers", "64");}
+									if(Integer.parseInt(cfgtokens[10])==8) { config.settings.put("maxmidiplayers", "96");}
 
 									config.saveConfigs();
 									settingsChanged();
@@ -474,6 +487,10 @@ public class Libretro
 		if(midiSoundfont.equals("Custom"))  { PlatformPlayer.customMidi = true; }
 		if(midiSoundfont.equals("Default")) { PlatformPlayer.customMidi = false; }
 
+		String mapToEntireKeypad = config.settings.get("maptofullkeypad");
+		if(mapToEntireKeypad.equals("on"))  { directionalsAsEntireKeypad = true; }
+		if(mapToEntireKeypad.equals("off")) { directionalsAsEntireKeypad = false; }
+
 		String G2DHardwareAcceleration = config.sysSettings.get("2DHWAcceleration");
 		if(G2DHardwareAcceleration.equals("on")) 
 		{ 
@@ -532,7 +549,7 @@ public class Libretro
 		pressedKeys[mobikeyN] = false;
 	}
 
-	private int getMobileKeyJoy(int keycode)
+	private int getMobileKeyJoy(int keycode, boolean pressed)
 	{
 		// Input mappings that are expected to be the same on all control modes
 		switch(keycode)
@@ -551,11 +568,75 @@ public class Libretro
 		{
 			switch(keycode)
 			{
-				case 0: return Mobile.NOKIA_UP; // Up
-				case 1: return Mobile.NOKIA_DOWN; // Down
-				case 2: return Mobile.NOKIA_LEFT; // Left
-				case 3: return Mobile.NOKIA_RIGHT; // Right
-				case 7: return Mobile.NOKIA_SOFT3; // Y
+				case 0: 
+					if(pressed) 
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM2);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM4); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM6); return Mobile.KEY_NUM3; }
+						else { keyDown(Mobile.NOKIA_UP); return Mobile.KEY_NUM2; } // Up
+					}
+					else 
+					{ 
+						incomingPressedKeys.remove(Mobile.KEY_NUM2);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM4); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM6); return Mobile.KEY_NUM3; }
+						else { keyUp(Mobile.NOKIA_UP); return Mobile.KEY_NUM2; } // Up
+					}
+
+				case 1: 
+					if(pressed) 
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM8);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM4); return Mobile.KEY_NUM7; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM6); return Mobile.KEY_NUM9; }
+						else { keyDown(Mobile.NOKIA_DOWN); return Mobile.KEY_NUM8; }  // Down
+					}
+					else 
+					{ 
+						incomingPressedKeys.remove(Mobile.KEY_NUM8);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM4); return Mobile.KEY_NUM7; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM6); return Mobile.KEY_NUM9; }
+						else { keyUp(Mobile.NOKIA_DOWN); return Mobile.KEY_NUM8; }  // Down
+					}
+
+				case 2: 
+					if(pressed)
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM4);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM2); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM8); return Mobile.KEY_NUM7; }
+						else { keyDown(Mobile.NOKIA_LEFT); return Mobile.KEY_NUM4; }  // Left
+					}
+					else 
+					{
+						incomingPressedKeys.remove(Mobile.KEY_NUM4); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM2); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM8); return Mobile.KEY_NUM7; }
+						else { keyUp(Mobile.NOKIA_LEFT); return Mobile.KEY_NUM4; }  // Left
+					}
+
+				case 3:
+					if(pressed) 
+					{
+						incomingPressedKeys.add(Mobile.KEY_NUM6); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM2); return Mobile.KEY_NUM3; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM8); return Mobile.KEY_NUM9; }
+						else { keyDown(Mobile.NOKIA_RIGHT); return Mobile.KEY_NUM6; }  // Right
+					}
+					else 
+					{
+						incomingPressedKeys.remove(Mobile.KEY_NUM6); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM2); return Mobile.KEY_NUM3; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM8); return Mobile.KEY_NUM9; }
+						else { keyUp(Mobile.NOKIA_RIGHT); return Mobile.KEY_NUM6; }  // Right
+					}
+
+				case 7: 
+					if(pressed) { keyDown(Mobile.NOKIA_SOFT3); }
+					else { keyUp(Mobile.NOKIA_SOFT3); }
+					return Mobile.KEY_NUM5; // Y
+
 				case 8: return Mobile.NOKIA_SOFT2; // Start
 				case 9: return Mobile.NOKIA_SOFT1; // Select
 			}
@@ -564,11 +645,76 @@ public class Libretro
 		{
 			switch(keycode)
 			{
-				case 0: return Mobile.SIEMENS_UP; // Up
-				case 1: return Mobile.SIEMENS_DOWN; // Down
-				case 2: return Mobile.SIEMENS_LEFT; // Left
-				case 3: return Mobile.SIEMENS_RIGHT; // Right
-				case 7: return Mobile.SIEMENS_FIRE; // Y
+				case 0: 
+					if(pressed) 
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM2);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM4); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM6); return Mobile.KEY_NUM3; }
+						else { keyDown(Mobile.SIEMENS_UP); return Mobile.KEY_NUM2; } // Up
+					}
+					else 
+					{ 
+						incomingPressedKeys.remove(Mobile.KEY_NUM2);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM4); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM6); return Mobile.KEY_NUM3; }
+						else { keyUp(Mobile.SIEMENS_UP); return Mobile.KEY_NUM2; } // Up
+					}
+
+				case 1: 
+					if(pressed) 
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM8);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM4); return Mobile.KEY_NUM7; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM6); return Mobile.KEY_NUM9; }
+						else { keyDown(Mobile.SIEMENS_DOWN); return Mobile.KEY_NUM8; }  // Down
+					}
+					else 
+					{ 
+						incomingPressedKeys.remove(Mobile.KEY_NUM8);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM4); return Mobile.KEY_NUM7; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM6); return Mobile.KEY_NUM9; }
+						else { keyUp(Mobile.SIEMENS_DOWN); return Mobile.KEY_NUM8; }  // Down
+					}
+
+				case 2: 
+					if(pressed)
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM4);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM2); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM8); return Mobile.KEY_NUM7; }
+						else { keyDown(Mobile.SIEMENS_LEFT); return Mobile.KEY_NUM4; }  // Left
+					}
+					else 
+					{
+						incomingPressedKeys.remove(Mobile.KEY_NUM4); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM2); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM8); return Mobile.KEY_NUM7; }
+						else { keyUp(Mobile.SIEMENS_LEFT); return Mobile.KEY_NUM4; }  // Left
+					}
+
+				case 3:
+					if(pressed) 
+					{
+						incomingPressedKeys.add(Mobile.KEY_NUM6); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM2); return Mobile.KEY_NUM3; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM8); return Mobile.KEY_NUM9; }
+						else { keyDown(Mobile.SIEMENS_RIGHT); return Mobile.KEY_NUM6; }  // Right
+					}
+					else 
+					{
+						incomingPressedKeys.remove(Mobile.KEY_NUM6); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM2); return Mobile.KEY_NUM3; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM8); return Mobile.KEY_NUM9; }
+						else { keyUp(Mobile.SIEMENS_RIGHT); return Mobile.KEY_NUM6; }  // Right
+					}
+
+				
+				case 7:
+					if(pressed) { keyDown(Mobile.SIEMENS_FIRE); }
+					else { keyUp(Mobile.SIEMENS_FIRE); }
+					return Mobile.KEY_NUM5; // Y
+
 				case 8: return Mobile.SIEMENS_SOFT2; // Start
 				case 9: return Mobile.SIEMENS_SOFT1; // Select
 			}
@@ -577,11 +723,75 @@ public class Libretro
 		{
 			switch(keycode)
 			{
-				case 0: return Mobile.MOTOROLA_UP; // Up
-				case 1: return Mobile.MOTOROLA_DOWN; // Down
-				case 2: return Mobile.MOTOROLA_LEFT; // Left
-				case 3: return Mobile.MOTOROLA_RIGHT; // Right
-				case 7: return Mobile.MOTOROLA_FIRE; // Y
+				case 0: 
+					if(pressed) 
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM2);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM4); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM6); return Mobile.KEY_NUM3; }
+						else { keyDown(Mobile.MOTOROLA_UP); return Mobile.KEY_NUM2; } // Up
+					}
+					else 
+					{ 
+						incomingPressedKeys.remove(Mobile.KEY_NUM2);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM4); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM6); return Mobile.KEY_NUM3; }
+						else { keyUp(Mobile.MOTOROLA_UP); return Mobile.KEY_NUM2; } // Up
+					}
+
+				case 1: 
+					if(pressed) 
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM8);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM4); return Mobile.KEY_NUM7; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM6); return Mobile.KEY_NUM9; }
+						else { keyDown(Mobile.MOTOROLA_DOWN); return Mobile.KEY_NUM8; }  // Down
+					}
+					else 
+					{ 
+						incomingPressedKeys.remove(Mobile.KEY_NUM8);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM4); return Mobile.KEY_NUM7; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM6); return Mobile.KEY_NUM9; }
+						else { keyUp(Mobile.MOTOROLA_DOWN); return Mobile.KEY_NUM8; }  // Down
+					}
+
+				case 2: 
+					if(pressed)
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM4);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM2); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM8); return Mobile.KEY_NUM7; }
+						else { keyDown(Mobile.MOTOROLA_LEFT); return Mobile.KEY_NUM4; }  // Left
+					}
+					else 
+					{
+						incomingPressedKeys.remove(Mobile.KEY_NUM4); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM2); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM8); return Mobile.KEY_NUM7; }
+						else { keyUp(Mobile.MOTOROLA_LEFT); return Mobile.KEY_NUM4; }  // Left
+					}
+
+				case 3:
+					if(pressed) 
+					{
+						incomingPressedKeys.add(Mobile.KEY_NUM6); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM2); return Mobile.KEY_NUM3; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM8); return Mobile.KEY_NUM9; }
+						else { keyDown(Mobile.MOTOROLA_RIGHT); return Mobile.KEY_NUM6; }  // Right
+					}
+					else 
+					{
+						incomingPressedKeys.remove(Mobile.KEY_NUM6); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM2); return Mobile.KEY_NUM3; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM8); return Mobile.KEY_NUM9; }
+						else { keyUp(Mobile.MOTOROLA_RIGHT); return Mobile.KEY_NUM6; }  // Right
+					}
+
+				case 7:
+					if(pressed) { keyDown(Mobile.MOTOROLA_FIRE); }
+					else { keyUp(Mobile.MOTOROLA_FIRE); }
+					return Mobile.KEY_NUM5; // Y
+
 				case 8: return Mobile.MOTOROLA_SOFT2; // Start
 				case 9: return Mobile.MOTOROLA_SOFT1; // Select
 			}
@@ -590,10 +800,70 @@ public class Libretro
 		{
 			switch(keycode)
 			{
-				case 0: return Mobile.KEY_NUM2; // Up
-				case 1: return Mobile.KEY_NUM8; // Down
-				case 2: return Mobile.KEY_NUM4; // Left
-				case 3: return Mobile.KEY_NUM6; // Right
+				case 0:
+					if(pressed) 
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM2);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM4); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM6); return Mobile.KEY_NUM3; }
+						else { return Mobile.KEY_NUM2; } // Up
+					}
+					else 
+					{ 
+						incomingPressedKeys.remove(Mobile.KEY_NUM2);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM4); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM6); return Mobile.KEY_NUM3; }
+						else { return Mobile.KEY_NUM2; } // Up
+					}
+
+				case 1: 
+					if(pressed) 
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM8);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM4); return Mobile.KEY_NUM7; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM6); return Mobile.KEY_NUM9; }
+						else { return Mobile.KEY_NUM8; }  // Down
+					}
+					else 
+					{ 
+						incomingPressedKeys.remove(Mobile.KEY_NUM8);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM4) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM4); return Mobile.KEY_NUM7; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM6) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM6); return Mobile.KEY_NUM9; }
+						else { return Mobile.KEY_NUM8; }  // Down
+					}
+
+				case 2: 
+					if(pressed)
+					{ 
+						incomingPressedKeys.add(Mobile.KEY_NUM4);
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM2); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM8); return Mobile.KEY_NUM7; }
+						else { return Mobile.KEY_NUM4; }  // Left
+					}
+					else 
+					{
+						incomingPressedKeys.remove(Mobile.KEY_NUM4); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM2); return Mobile.KEY_NUM1; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM8); return Mobile.KEY_NUM7; }
+						else { return Mobile.KEY_NUM4; }  // Left
+					}
+
+				case 3:
+					if(pressed) 
+					{
+						incomingPressedKeys.add(Mobile.KEY_NUM6); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM2); return Mobile.KEY_NUM3; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyUp(Mobile.KEY_NUM8); return Mobile.KEY_NUM9; }
+						else { return Mobile.KEY_NUM6; }  // Right
+					}
+					else 
+					{
+						incomingPressedKeys.remove(Mobile.KEY_NUM6); 
+						if(incomingPressedKeys.contains(Mobile.KEY_NUM2) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM2); return Mobile.KEY_NUM3; }
+						else if (incomingPressedKeys.contains(Mobile.KEY_NUM8) && directionalsAsEntireKeypad) { keyDown(Mobile.KEY_NUM8); return Mobile.KEY_NUM9; }
+						else { return Mobile.KEY_NUM6; }  // Right
+					}
+
 				case 7: return Mobile.KEY_NUM5; // Y
 				case 8: return Mobile.NOKIA_SOFT2; // Start
 				case 9: return Mobile.NOKIA_SOFT1; // Select

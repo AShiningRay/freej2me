@@ -298,10 +298,8 @@ public class Anbu
 			if(keycode == 0x02) return Mobile.KEY_NUM9; // X
 			if(keycode == 0x03) return Mobile.KEY_POUND; // Y
 
-			
 			if(keycode == 0x05) return Mobile.KEY_NUM0; // Home
 			
-
 			if(keycode == 0x07) return Mobile.GAME_A; // Left Analog press
 			if(keycode == 0x08) return Mobile.GAME_B; // Right Analog press
 

@@ -161,6 +161,20 @@ struct retro_core_option_v2_definition core_options[] =
         "on"
     },
     {
+        "freej2me_mapfullkeypad",
+        "Virtual Phone Settings > Use D-pad/Analog to control the entire keypad",
+        "Use D-pad/Analog to control the entire keypad",
+        "Makes certain games such as Time Crisis Elite more accessible by mapping the whole virtual keypad to the directional keys and/or analog stick, instead of only the usual 2,4,6,8 keys. This, however, can affect other games negatively (Crash of the Titans for example) so only use when needed.",
+        "Makes certain games such as Time Crisis Elite more accessible by mapping the whole virtual keypad to the directional keys and/or analog stick, instead of only the usual 2,4,6,8 keys. This, however, can affect other games negatively (Crash of the Titans for example) so only use when needed.",
+        "vphone_settings",
+        {
+            { "off", "off" },
+            { "on",  "on" },
+            { NULL, NULL },
+        },
+        "off"
+    },
+    {
         "freej2me_midifont",
         "Virtual Phone Settings > MIDI Soundfont (Core Restart required)",
         "MIDI Soundfont (Core Restart required)",
@@ -407,6 +421,17 @@ struct retro_core_option_definition core_options_v1 [] =
         "on"
     },
     {
+        "freej2me_mapfullkeypad",
+        "Use D-pad/Analog to control the entire keypad",
+        "Makes certain games such as Time Crisis Elite more accessible by mapping the whole virtual keypad to the directional keys and/or analog stick, instead of only the usual 2,4,6,8 keys. This, however, can affect other games negatively (Crash of the Titans for example) so only use when needed.",
+        {
+            { "off", "off" },
+            { "on",  "on" },
+            { NULL, NULL },
+        },
+        "off"
+    },
+    {
         "freej2me_midifont",
         "MIDI Soundfont (Core Restart required)",
         "Selects which kind of MIDI soundfont to use. 'Default' uses the soundfont bundled with the system or Java VM, while 'Custom' allows you to place a custom soundfont on '<freej2me-lr.jar folder>/freej2me_system/customMIDI' and use it on J2ME apps to simulate a specific phone or improve MIDI sound quality. WARNING: Big soundfonts greatly increase the emulator's RAM footprint and processing requirements, while smaller ones can actually help it perform better.",
@@ -563,6 +588,10 @@ static const struct retro_variable vars[] =
     { /* Virtual Phone Sound */
         "freej2me_sound",
         "Virtual Phone Sound (Core Restart required); on|off"
+    },
+    { /* Allow the D-pad/analog to be used for the whole virtual keypad */
+        "freej2me_mapfullkeypad",
+        "Use D-pad/Analog to control the entire keypad; off|on",
     },
     { /* MIDI Soundfont */
         "freej2me_midifont",
