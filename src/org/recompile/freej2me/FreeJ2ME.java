@@ -113,10 +113,6 @@ public class FreeJ2ME
 		lcdWidth = 240;
 		lcdHeight = 320;
 
-		if(args.length>=1)
-		{
-			awtGUI.setJarPath(getFormattedLocation(args[0]));
-		}
 		if(args.length>=3)
 		{
 			lcdWidth = Integer.parseInt(args[1]);
@@ -142,6 +138,10 @@ public class FreeJ2ME
 		awtGUI.setMainFrame(main);
 		/* Append the awt menu bar into FreeJ2ME's frame */
 		main.setMenuBar(awtGUI.getMenuBar());
+
+		/* Only attempt to set jar path argument here, once the GUI and everything else is loaded */
+		if(args.length>=1) { awtGUI.setJarPath(getFormattedLocation(args[0])); awtGUI.setLoadedFile(); }
+		
 
 		Mobile.getPlatform().setPainter(new Runnable()
 		{

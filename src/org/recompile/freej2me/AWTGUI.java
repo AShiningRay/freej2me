@@ -928,6 +928,8 @@ public final class AWTGUI
 
 	public void clearChanged() { hasPendingChange = false; }
 
+	public void setLoadedFile() { fileLoaded = true; }
+
 	public boolean hasLoadedFile() { return fileLoaded; }
 
 	public void setMainFrame(Frame main) { this.main = main; }
